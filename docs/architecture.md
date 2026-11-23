@@ -45,18 +45,18 @@ The key to smoothness: the **main (UI) thread never decodes, waits on the networ
 |---|---|---|---|
 | **Main / UI** | Qt | Widgets, input, OpenGL texture upload + draw | Display refresh (60 Hz) |
 | **Stream** | `StreamService` (QThread) | RTSP read → GPU decode (D3D11VA) → put frame in buffer; pass packets to recorder | Camera FPS |
-| **Recorder** | `Recorder` (QThread + queue) | Remux H.264 + μ-law audio packets → MKV (no re-encode), new file every 30 min | Camera FPS |
+| **Recorder** | `Recorder` (QThread + queue) | Remux H.264 + AAC audio packets → MKV (no re-encode), new file every 30 min | Camera FPS |
 | **Control** | `CameraClient` (QThread + command queue) | HTTP commands to phone, in order | On demand |
 | **Poller** | `StatusPoller` (QTimer in control thread) | `status.json` + `sensors.json` (battery, settings) | Every 5 s |
 | **Motion** (V2) | `MotionDetector` (QThread) | Downscaled grayscale diff | ~5 FPS |
 | **Snapshot** | `QThreadPool` task | Encode + save JPEG | On demand |
 
 ### Why the recorder gets packets, not frames
-The stream thread reads **compressed H.264 video and μ-law audio packets** from the same RTSP session. All packets go to the recorder untouched (remux = almost zero CPU); only video packets also go to the decoder for display. Recording never adds decode/encode work.
+The stream thread reads **compressed H.264 video and AAC audio packets** from the same RTSP session. All packets go to the recorder untouched (remux = almost zero CPU); only video packets also go to the decoder for display. Recording never adds decode/encode work.
 
 ### Why MKV
 - An MKV file stays playable up to the last written frame if the app crashes or power is lost (an unfinished MP4 is unreadable).
-- MKV stores μ-law audio directly — no audio conversion.
+- MKV stores the phone's AAC audio directly — no audio conversion. (We use `/h264_aac.sdp`, not `/h264_ulaw.sdp`: FFmpeg's MKV muxer rejects μ-law.)
 - Segments: the recorder closes the file and opens `..._part2.mkv` at the next **keyframe** after 30 minutes, so no frames are lost between parts.
 
 ---
@@ -166,6 +166,7 @@ camara/
 │       │
 │       ├── core/                 # Plain Python — no Qt widgets, no network
 │       │   ├── models.py         # Dataclasses: CameraProfile, StreamInfo, CameraStatus, DeviceInfo…
+│       │   ├── frames.py         # VideoFrame + LatestFrameBuffer (in core so the UI may read frames)
 │       │   ├── state.py          # AppState (QObject + signals)
 │       │   ├── controller.py     # AppController — handles user actions, wires services
 │       │   └── errors.py         # App-specific exceptions
@@ -182,7 +183,6 @@ camara/
 │       │   ├── rtsp_source.py    # PyAV RTSP + hardware decode
 │       │   ├── mjpeg_source.py   # MJPEG fallback (PyAV / FFmpeg decoder)
 │       │   ├── hwaccel.py        # D3D11VA → DXVA2 → software selection
-│       │   ├── frame_buffer.py   # LatestFrameBuffer (thread-safe, size 1)
 │       │   └── service.py        # StreamService — thread, reconnect/backoff, stats
 │       │
 │       ├── capture/              # Saving to disk
@@ -244,6 +244,9 @@ camara/
 │   ├── test_capabilities.py
 │   ├── test_recorder.py          # Segmenting at 30 min, MKV playable
 │   ├── test_frame_buffer.py
+│   ├── test_stream_service.py    # Reconnect, backoff, FAILED/retry, fallback, coalescing
+│   ├── test_rtsp_source.py       # PyAV source on a generated MKV file
+│   ├── test_timing.py
 │   ├── test_settings.py
 │   ├── test_storage.py
 │   └── test_controller.py        # With fake camera + fake video source

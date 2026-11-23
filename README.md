@@ -2,7 +2,7 @@
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
-> Status: **in development** — Version 1, build steps 1 (project setup) and 2 (camera control client) done.
+> Status: **in development** — Version 1, build steps 1–3 done (project setup, camera control, video stream service).
 
 ## Requirements
 

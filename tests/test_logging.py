@@ -7,8 +7,8 @@ from camdesk.utils.logging import redact, setup_logging
 
 
 def test_redacts_url_credentials() -> None:
-    assert redact("rtsp://admin:s3cret@192.168.8.105:8080/h264_ulaw.sdp") == (
-        "rtsp://***:***@192.168.8.105:8080/h264_ulaw.sdp"
+    assert redact("rtsp://admin:s3cret@192.168.8.105:8080/h264_aac.sdp") == (
+        "rtsp://***:***@192.168.8.105:8080/h264_aac.sdp"
     )
 
 

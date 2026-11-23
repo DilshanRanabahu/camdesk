@@ -108,7 +108,7 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 
 | Endpoint | Purpose |
 |---|---|
-| `rtsp://<ip>:8080/h264_ulaw.sdp` | H.264 video stream (primary) |
+| `rtsp://<ip>:8080/h264_aac.sdp` | H.264 video + AAC audio (primary) |
 | `http://<ip>:8080/video` | MJPEG stream (fallback) |
 | `http://<ip>:8080/shot.jpg` | Single snapshot |
 | `http://<ip>:8080/audio.wav` | Audio stream |

@@ -20,7 +20,7 @@ Final decisions for the project. Anything not listed here follows [architecture.
 | # | Topic | Decision | Reason |
 |---|---|---|---|
 | 2 | File format | **MKV** | Still playable if the app crashes or power is lost mid-recording (MP4 is not) |
-| 3 | Audio | **Recorded with video**, kept in the phone's original format (μ-law), no conversion | MKV supports it directly; no CPU cost |
+| 3 | Audio | **Recorded with video** as the phone's **AAC** (RTSP `/h264_aac.sdp`), no conversion | *Changed in step 3:* MKV can't store μ-law; AAC goes into MKV (and MP4) as-is, no CPU cost, and sounds far better (44.1 kHz vs 8 kHz) |
 | 4 | Split long recordings | **New file every 30 minutes** | One problem never ruins hours of footage |
 | — | Convert to MP4 | Optional one-click convert, later | For sharing to phones / social media |
 
@@ -34,6 +34,9 @@ Final decisions for the project. Anything not listed here follows [architecture.
 | 18 | MJPEG fallback decoder | **PyAV (FFmpeg)** instead of PyTurboJPEG | PyTurboJPEG needs a separate native libjpeg-turbo install on Windows; FFmpeg's decoder is already bundled and fast enough for a fallback |
 | 19 | Fake camera location | `src/camdesk/dev/` (not `tests/`) | `--fake` mode in the app needs it, not just tests |
 | 20 | Qt package | **PySide6-Essentials** (not full `PySide6`) | Has everything CamDesk needs (Widgets, OpenGL, Test); skips WebEngine/3D/Multimedia add-ons — much smaller download and `.exe` |
+| 21 | Frame types location | `VideoFrame` + `LatestFrameBuffer` in `core/frames.py` (not `stream/`) | The UI's video widget reads frames, and the UI may only import `core/` |
+| 22 | Low-latency input | FFmpeg `fflags=nobuffer` for the camera | Lower delay; drops only the single frame read while probing at connect time |
+| 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 
 ### Security
 | # | Topic | Decision | Reason |
@@ -155,9 +158,9 @@ Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
 ### Stream
 | Item | Measured |
 |---|---|
-| RTSP `/h264_ulaw.sdp` | ✅ Opens in ~2 s over TCP |
+| RTSP `/h264_aac.sdp` | ✅ Opens in ~2 s over TCP (also served: `h264_ulaw`, `h264_opus`, `h264_pcm`) |
 | Video | **H.264, 1920×1080, yuv420p, 29.9 FPS** |
-| Audio | **μ-law (pcm_mulaw), 8 kHz, mono** — stored in MKV as-is |
+| Audio | **AAC, 44.1 kHz** — stored in MKV as-is (μ-law from `h264_ulaw.sdp` is rejected by the MKV muxer) |
 | Keyframes | about every 2 s (good for clean 30-min splits) |
 | Bitrate | **~16 Mbps** at quality 49 → ~7 GB per hour of recording ⚠️ |
 
@@ -173,6 +176,15 @@ Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
 | Command reply | XML `<result>Ok</result>`, unknown path → 404 | Status code checked |
 | Battery (`sensors.json`) | **Empty `{}`** | Battery hidden in the UI when unavailable |
 | Exposure compensation | **Not offered** | Exposure control hidden |
+
+### Stream service on the real phone (build step 3)
+| | RTSP (primary) | MJPEG (fallback) |
+|---|---|---|
+| Video | 1920×1080 @ 29.8 FPS | 1920×1080 @ 29.7 FPS |
+| Decoder | D3D11VA (GPU) | Software (CPU) |
+| CamDesk process CPU | **~8% of one core** | ~24% |
+| Frames dropped | 0 | 0 |
+| Frame handoff to UI | 0.5 ms median | 1.2 ms median |
 
 ### Open question
 - **Bitrate:** 16 Mbps is heavy for 2.4 GHz Wi-Fi and disk space. Consider lowering IP Webcam's video quality, or 1280×720, if the stream stutters. To be checked with the debug overlay in build step 4.

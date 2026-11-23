@@ -26,10 +26,10 @@ def test_values_are_clamped() -> None:
 
 
 def test_stream_urls() -> None:
-    assert ep.rtsp_url("192.168.8.105", 8080) == "rtsp://192.168.8.105:8080/h264_ulaw.sdp"
+    assert ep.rtsp_url("192.168.8.105", 8080) == "rtsp://192.168.8.105:8080/h264_aac.sdp"
     assert ep.mjpeg_url("192.168.8.105", 8080) == "http://192.168.8.105:8080/video"
 
 
 def test_rtsp_credentials_are_escaped() -> None:
     url = ep.rtsp_url("10.0.0.2", 8080, "me", "p@ss:word")
-    assert url == "rtsp://me:p%40ss%3Aword@10.0.0.2:8080/h264_ulaw.sdp"
+    assert url == "rtsp://me:p%40ss%3Aword@10.0.0.2:8080/h264_aac.sdp"

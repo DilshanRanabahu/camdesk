@@ -12,7 +12,9 @@ SENSORS = "/sensors.json"
 SHOT = "/shot.jpg"
 MJPEG_VIDEO = "/video"
 AUDIO_WAV = "/audio.wav"
-RTSP_H264 = "/h264_ulaw.sdp"  # H.264 video + μ-law audio
+# H.264 video + AAC 44.1 kHz audio. Not /h264_ulaw.sdp: FFmpeg's MKV muxer rejects μ-law,
+# while AAC can be stored in MKV (and MP4) without re-encoding. Verified on the phone.
+RTSP_H264 = "/h264_aac.sdp"
 
 # -- setting keys (used with /settings/<key>?set=<value>) ----------------
 

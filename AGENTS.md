@@ -50,7 +50,7 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 - **Never block the UI thread.** No network calls, decoding, file writes, `time.sleep()` or waits on the main thread.
 - Video frames go through **`LatestFrameBuffer`** (size 1, overwrite). Never queue frames for display.
 - Decoding uses hardware (D3D11VA → DXVA2 → software fallback). Do not convert frames to RGB on the CPU for display; the NV12 shader does it.
-- **Recording remuxes packets** (H.264 + μ-law audio → MKV). Never decode/re-encode to record.
+- **Recording remuxes packets** (H.264 + AAC audio → MKV). Never decode/re-encode to record.
 - Animations only on overlay widgets — never on or over the `QOpenGLWidget` paint.
 - Cross-thread communication: Qt queued signals, `queue.Queue`, or `LatestFrameBuffer`. No other shared mutable state.
 - If a change could affect smoothness, check it with the debug overlay (`Ctrl+D`). Target: **1080p @ 30 FPS, ~200 ms latency, < 10% CPU**.
@@ -61,7 +61,7 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 - Max 30 FPS, digital zoom 1×–10×, exposure −20…+20, no stabilization.
 - Read capabilities from `status.json?show_avail=1` — **do not hard-code** per-phone behavior; the A06 values are only defaults for the fake camera.
 - Phone IP is currently `192.168.8.105:8080`, but it can change — never hard-code it in source.
-- Primary stream: `rtsp://<ip>:8080/h264_ulaw.sdp` (verified: H.264 1080p 30 FPS + μ-law 8 kHz, ~16 Mbps) · fallback: `http://<ip>:8080/video` (MJPEG).
+- Primary stream: `rtsp://<ip>:8080/h264_aac.sdp` (verified: H.264 1080p 30 FPS + AAC 44.1 kHz, ~16 Mbps; **not** `h264_ulaw.sdp` — MKV can't store μ-law) · fallback: `http://<ip>:8080/video` (MJPEG).
 - Real API quirks (zoom ×100 units, `avail.torch` not `flashmode`, empty sensors, incomplete `avail` while switching) are in [docs/decisions.md](docs/decisions.md#5-verified-on-the-real-phone-2026-11-23).
 
 ## Code Style
