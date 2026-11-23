@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Build output
+build/
+dist/
+*.build/
+*.dist/
+*.onefile-build/
+
+# CamDesk runtime data (never commit footage, logs or local settings)
+recordings/
+snapshots/
+logs/
+*.mkv
+*.mp4
+*.log
+settings.json
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.claude/settings.local.json
