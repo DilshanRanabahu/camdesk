@@ -60,6 +60,18 @@ def _set_default_gl_format() -> None:
     QSurfaceFormat.setDefaultFormat(fmt)
 
 
+def _set_windows_app_id() -> None:
+    """Give CamDesk its own taskbar identity, so Windows shows our icon instead of Python's."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("CamDesk.CamDesk")
+    except (AttributeError, OSError):
+        log.debug("Could not set the Windows app id", exc_info=True)
+
+
 def run(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     log_file = setup_logging(debug=args.debug)
@@ -80,9 +92,11 @@ def run(argv: Sequence[str] | None = None) -> int:
         return 2
 
     from PySide6.QtCore import QTimer
+    from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QApplication
 
     from camdesk.camera import endpoints as ep
+    from camdesk.config import paths
     from camdesk.core.frames import LatestFrameBuffer
     from camdesk.stream.mjpeg_source import MjpegSource
     from camdesk.stream.rtsp_source import RtspSource
@@ -90,9 +104,11 @@ def run(argv: Sequence[str] | None = None) -> int:
     from camdesk.ui.preview_window import PreviewWindow
 
     _set_default_gl_format()
+    _set_windows_app_id()
     app = QApplication(sys.argv[:1])
     app.setApplicationName("CamDesk")
     app.setApplicationVersion(__version__)
+    app.setWindowIcon(QIcon(str(paths.app_icon())))
 
     buffer = LatestFrameBuffer()
     if args.fake:

@@ -18,6 +18,32 @@ from camdesk.core.errors import StreamError
 from camdesk.core.frames import YUV420P, VideoFrame
 from camdesk.stream.source import SourceItem, VideoSource
 
+# 75% color bars (white, yellow, cyan, green, magenta, red, blue) as RGB 0–1
+_BARS = np.array(
+    [[0.75, 0.75, 0.75], [0.75, 0.75, 0], [0, 0.75, 0.75], [0, 0.75, 0],
+     [0.75, 0, 0.75], [0.75, 0, 0], [0, 0, 0.75]],
+)  # fmt: skip
+
+
+def test_pattern(w: int, h: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Color bars over a gray ramp, as YUV420P planes (BT.601, TV range).
+
+    Wrong colors on screen point straight at a color-conversion bug.
+    """
+    rgb = np.empty((h, w, 3))
+    split = int(h * 0.72)
+    rgb[:split] = _BARS[np.minimum(np.arange(w) * len(_BARS) // w, len(_BARS) - 1)]
+    rgb[split:] = np.linspace(0.0, 1.0, w)[None, :, None]
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    y = 16 + 219 * (0.299 * r + 0.587 * g + 0.114 * b)
+    cb = 128 + 224 * (-0.168736 * r - 0.331264 * g + 0.5 * b)
+    cr = 128 + 224 * (0.5 * r - 0.418688 * g - 0.081312 * b)
+
+    def to_u8(a: np.ndarray) -> np.ndarray:
+        return np.clip(np.rint(a), 0, 255).astype(np.uint8)
+
+    return to_u8(y), to_u8(cb[::2, ::2]), to_u8(cr[::2, ::2])
+
 
 class FakeVideoPlan:
     """Shared state across reconnects (each reconnect creates a new FakeVideoSource)."""
@@ -69,9 +95,7 @@ class FakeVideoSource(VideoSource):
             raise StreamError("Source is not open")
         w, h = self.plan.width, self.plan.height
         interval = 1.0 / self.plan.fps
-        y_base = np.tile(np.linspace(16, 235, w, dtype=np.uint8), (h, 1))
-        u = np.full((h // 2, w // 2), 128, np.uint8)
-        v = np.full((h // 2, w // 2), 128, np.uint8)
+        y_base, u, v = test_pattern(w, h)
         start = time.perf_counter()
         limit = self.plan.frames_per_open
         for n in itertools.count():

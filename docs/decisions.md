@@ -53,7 +53,7 @@ Decisions 18–26 were made during development; each row says why.
 | # | Topic | Decision | Reason |
 |---|---|---|---|
 | 13 | Distribution | **Portable `.exe`** first; Inno Setup installer later | Fastest way to run it |
-| 14 | Icon / logo | Simple camera-lens icon in accent blue `#4C8DFF` | Matches the UI theme |
+| 14 | Icon / logo | ✅ Camera lens on a monitor with Wi-Fi arcs, dark rounded square, accent `#4C8DFF` (made with ChatGPT); plus a "Cam**Desk**" wordmark | Matches the UI theme; readable from 24 px up. Optional later: a lens-only variant for 16 px |
 | 15 | Auto-update | **Not needed** | Personal use |
 | 16 | License | Decide only if published (e.g. MIT); PySide6 is LGPL — fine for personal/free use | Not needed now |
 

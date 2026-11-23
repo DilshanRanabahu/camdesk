@@ -45,3 +45,12 @@ def default_snapshots_dir() -> Path:
 
 def default_recordings_dir() -> Path:
     return default_captures_dir() / "Recordings"
+
+
+def resources_dir() -> Path:
+    """Bundled images (icon, wordmark). Ships in the package; not affected by CAMDESK_HOME."""
+    return Path(__file__).resolve().parent.parent / "resources"
+
+
+def app_icon() -> Path:
+    return resources_dir() / "app.ico"

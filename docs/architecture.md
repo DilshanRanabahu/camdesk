@@ -162,7 +162,8 @@ camara/
 │   ├── decisions.md              # ✅ Decisions, target hardware, measurements
 │   ├── feature.md                # ✅ Feature list with progress
 │   ├── ui-design.md              # ✅ UI/UX spec
-│   └── architecture.md           # ✅ This file
+│   ├── architecture.md           # ✅ This file
+│   └── assets/                   # ✅ Images for the docs (README screenshot)
 ├── AGENTS.md                     # ✅ Rules for AI coding agents
 ├── CLAUDE.md                     # ✅ Points Claude Code to AGENTS.md
 ├── README.md                     # ✅ Setup + run instructions
@@ -214,7 +215,7 @@ camara/
 │       │
 │       ├── dev/                  # ✅ Run and test without the phone (`--fake`)
 │       │   ├── fake_camera.py        # ✅ Fake IP Webcam HTTP API, mirrors the real phone's quirks
-│       │   └── fake_video_source.py  # ✅ Moving test pattern; can simulate failed opens / drops
+│       │   └── fake_video_source.py  # ✅ Color bars + moving bar; can simulate failed opens / drops
 │       │
 │       ├── ui/
 │       │   ├── main_window.py    # Frameless window, layout, shortcuts
@@ -241,9 +242,11 @@ camara/
 │       │       ├── stylesheet.py     # Builds QSS from tokens
 │       │       └── icons.py          # Loads + recolors Lucide SVGs
 │       │
-│       ├── resources/
-│       │   ├── icons/            # Lucide SVG files (folder exists, empty)
-│       │   └── app.ico
+│       ├── resources/            # ✅ Logo files (built by scripts/make_icons.py)
+│       │   ├── app.ico           # ✅ Window/taskbar icon, 16–256 px
+│       │   ├── icon.png          # ✅ 1024 px transparent app icon
+│       │   ├── wordmark.png      # ✅ "CamDesk" logo (README banner, connect screen)
+│       │   └── icons/            # Lucide SVG files — step 7
 │       │
 │       └── utils/
 │           ├── logging.py        # ✅ Rotating file log in %APPDATA%\CamDesk\logs (credentials redacted)
@@ -269,6 +272,7 @@ camara/
 │
 └── scripts/
     ├── run.ps1                   # ✅ Run in dev mode (passes args through)
+    ├── make_icons.py             # ✅ Builds icon.png, app.ico, wordmark.png from source images
     └── build.ps1                 # Nuitka → dist\CamDesk.exe — step 10
 ```
 

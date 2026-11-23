@@ -244,4 +244,5 @@ Animations never touch the video widget — only overlays — so playback stays 
 - Frameless window with custom title bar; Windows 11 **Mica** backdrop where available
 - Overlay controls are separate translucent widgets on top of the `QOpenGLWidget` — never paint over the video texture
 - Icons: Lucide SVGs, recolored at runtime to match theme tokens
+- App icon + wordmark: `src/camdesk/resources/` (`app.ico` is set as the window/taskbar icon; the wordmark goes on the connect screen)
 - Animations via `QPropertyAnimation` (opacity, geometry)

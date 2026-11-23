@@ -1,9 +1,31 @@
+<p align="center">
+  <img src="src/camdesk/resources/wordmark.png" alt="CamDesk" width="560">
+</p>
+
+<p align="center">
+  <b>View, record and control your Android phone camera from Windows — smooth, GPU-accelerated and private.</b>
+</p>
+
+<p align="center">
+  <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows%2010%2F11-0E0F12?style=flat-square&logo=windows&logoColor=4C8DFF">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-0E0F12?style=flat-square&logo=python&logoColor=4C8DFF">
+  <img alt="Qt 6 / PySide6" src="https://img.shields.io/badge/UI-PySide6%20(Qt%206)-0E0F12?style=flat-square&logo=qt&logoColor=4C8DFF">
+  <img alt="Status: in development" src="https://img.shields.io/badge/status-in%20development-4C8DFF?style=flat-square">
+</p>
+
 # CamDesk
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
 > **Status: in development.** Version 1, build steps **1–4 of 10** done: live GPU-decoded video from the phone works.
 > The full dark UI, camera controls and recording are next. See [progress](docs/README.md#project-status).
+
+<p align="center">
+  <img src="docs/assets/preview-fake.png" alt="CamDesk live preview with the Ctrl+D debug overlay: 30 FPS, 0 dropped frames" width="800">
+  <br>
+  <sub>Live preview (build step 4) showing the built-in test pattern and the <code>Ctrl+D</code> debug overlay.
+  The full dark UI from <a href="docs/ui-design.md">ui-design.md</a> comes in step 6.</sub>
+</p>
 
 ## Highlights
 
@@ -59,6 +81,16 @@ uv run ruff format .     # format
 ## Tech stack
 
 Python 3.12 · PySide6-Essentials (Qt 6) · PyAV (FFmpeg) · OpenGL shaders · httpx · keyring · uv · pytest · ruff
+
+## Logo
+
+<img src="src/camdesk/resources/icon.png" alt="CamDesk app icon" width="96" align="left">
+
+The app icon is a camera lens on a desktop monitor with a Wi-Fi signal, in CamDesk's dark theme with the `#4C8DFF` accent.
+Files are in [`src/camdesk/resources/`](src/camdesk/resources/): `icon.png` (1024 px, transparent), `app.ico` (16–256 px, used for the window and taskbar) and `wordmark.png`.
+To regenerate them from new source images, run `uv run python scripts/make_icons.py <icon.png> <wordmark.png>`.
+
+<br clear="left">
 
 ## Where CamDesk stores data
 
