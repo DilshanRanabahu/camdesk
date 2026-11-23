@@ -23,10 +23,11 @@ def _free_port() -> int:
 
 
 def test_api_status_and_sensors(fake_camera: FakeCamera) -> None:
+    fake_camera.battery = 96.0
     api = CameraApi(fake_camera.host, fake_camera.port)
     status, capabilities = api.status()
     assert status.video_size == "1920x1080"
-    assert capabilities.has_torch
+    assert capabilities is not None and capabilities.has_torch
     assert api.sensors().battery_percent == pytest.approx(96.0)
     assert "/status.json?show_avail=1" in fake_camera.requests
     api.close()
@@ -38,7 +39,7 @@ def test_api_commands(fake_camera: FakeCamera) -> None:
     api.send(ep.zoom(40))
     api.send(ep.night_vision(True))
     assert fake_camera.state["torch"] == "on"
-    assert fake_camera.state["zoom"] == "40"
+    assert fake_camera.state["zoom"] == "460"
     assert fake_camera.state["night_vision"] == "on"
     api.close()
 
@@ -84,6 +85,7 @@ def client(qapp: QCoreApplication) -> Iterator[CameraClient]:
 
 
 def test_client_connects_and_reports_status(client: CameraClient, fake_camera: FakeCamera) -> None:
+    fake_camera.battery = 96.0
     reachable = SignalRecorder(client.reachable_changed)
     status = SignalRecorder(client.status_received)
     battery = SignalRecorder(client.device_info_received)

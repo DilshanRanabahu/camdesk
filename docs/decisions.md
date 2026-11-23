@@ -148,6 +148,35 @@ Also on the back: a 2 MP depth sensor (1600 × 1200, fixed focus) — not useful
 
 ---
 
-## 5. Future Idea (not in V1)
+## 5. Verified on the Real Phone (2026-11-23)
+
+Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
+
+### Stream
+| Item | Measured |
+|---|---|
+| RTSP `/h264_ulaw.sdp` | ✅ Opens in ~2 s over TCP |
+| Video | **H.264, 1920×1080, yuv420p, 29.9 FPS** |
+| Audio | **μ-law (pcm_mulaw), 8 kHz, mono** — stored in MKV as-is |
+| Keyframes | about every 2 s (good for clean 30-min splits) |
+| Bitrate | **~16 Mbps** at quality 49 → ~7 GB per hour of recording ⚠️ |
+
+### API behaviour (differs from common docs)
+| Item | Real behaviour | How CamDesk handles it |
+|---|---|---|
+| Zoom value | `curvals.zoom` = ratio × 100 (`"100"` = 1×, `"1000"` = 10×) | Parsed as ratio; max read from `avail.zoom` |
+| Zoom command | `/ptz?zoom=0…100` (`50` → `"550"` = 5.5×) | Used for the zoom slider |
+| Torch support | `avail.torch` = `["on","off"]` (back) / `["off"]` (front) | Used to enable the Flashlight button |
+| `avail.flashmode` | Lists `on` even on the front camera | **Ignored** (unreliable) |
+| Autofocus | `avail.focusmode` = `["off"]` on the front camera | Tap-to-focus disabled |
+| Switching camera | For ~2–3 s `avail` is incomplete | Keep previous capabilities (no flicker) |
+| Command reply | XML `<result>Ok</result>`, unknown path → 404 | Status code checked |
+| Battery (`sensors.json`) | **Empty `{}`** | Battery hidden in the UI when unavailable |
+| Exposure compensation | **Not offered** | Exposure control hidden |
+
+### Open question
+- **Bitrate:** 16 Mbps is heavy for 2.4 GHz Wi-Fi and disk space. Consider lowering IP Webcam's video quality, or 1280×720, if the stream stutters. To be checked with the debug overlay in build step 4.
+
+## 6. Future Idea (not in V1)
 
 **USB mode via ADB:** `adb forward tcp:8080 tcp:8080` lets CamDesk connect to `localhost:8080` over the USB cable — no Wi-Fi needed, lower latency, and the phone charges at the same time. ADB is already installed on this PC, so this is easy to add later.

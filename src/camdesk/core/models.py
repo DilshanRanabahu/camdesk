@@ -49,7 +49,7 @@ class CameraCapabilities:
     has_autofocus: bool = False
     has_front_camera: bool = False
     has_night_vision: bool = False
-    zoom_max_ratio: float = 1.0  # zoom percent 100 maps to this ratio (e.g. 10.0 -> "10×")
+    zoom_max_ratio: float = 1.0  # e.g. 10.0 -> slider goes 1.0× … 10.0×
     exposure_min: int = 0
     exposure_max: int = 0
     video_sizes: tuple[str, ...] = ()
@@ -64,7 +64,7 @@ class CameraCapabilities:
         return self.exposure_max > self.exposure_min
 
     def zoom_ratio(self, percent: int) -> float:
-        """Map IP Webcam's 0–100 zoom value to a display ratio (1.0× … zoom_max_ratio×)."""
+        """Map the 0–100 value used by the /ptz zoom command to a ratio (1.0× … max)."""
         p = max(0, min(100, percent))
         return 1.0 + (self.zoom_max_ratio - 1.0) * p / 100
 
@@ -82,10 +82,10 @@ class CameraStatus:
     facing: CameraFacing = CameraFacing.BACK
     torch: bool = False
     night_vision: bool = False
-    focus: bool = False
-    zoom_percent: int = 0  # 0–100, as IP Webcam reports it
+    zoom_ratio: float = 1.0  # 1.0 = no zoom
     quality: int = 50
     exposure: int = 0
+    focus_mode: str = ""
     video_size: str = ""
     orientation: str = "landscape"
 

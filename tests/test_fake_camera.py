@@ -27,7 +27,8 @@ def test_status_with_avail(fake_camera: FakeCamera) -> None:
     data = json.loads(body)
     assert code == 200
     assert data["curvals"]["video_size"] == "1920x1080"
-    assert "torch" in data["avail"]["flashmode"]
+    assert data["avail"]["torch"] == ["on", "off"]
+    assert data["avail"]["zoom"][-1] == "1000"
 
 
 def test_torch_and_front_camera(fake_camera: FakeCamera) -> None:
@@ -38,12 +39,14 @@ def test_torch_and_front_camera(fake_camera: FakeCamera) -> None:
     get(fake_camera, "/enabletorch")
     assert fake_camera.state["torch"] == "off"  # front camera has no flash
     data = json.loads(get(fake_camera, "/status.json?show_avail=1")[1])
-    assert data["avail"]["flashmode"] == ["off"]
+    assert data["avail"]["torch"] == ["off"]
 
 
 def test_zoom_is_clamped(fake_camera: FakeCamera) -> None:
+    get(fake_camera, "/ptz?zoom=50")
+    assert fake_camera.state["zoom"] == "550"  # same as the real phone
     get(fake_camera, "/ptz?zoom=250")
-    assert fake_camera.state["zoom"] == "100"
+    assert fake_camera.state["zoom"] == "1000"
 
 
 def test_unknown_path_404(fake_camera: FakeCamera) -> None:
@@ -51,7 +54,17 @@ def test_unknown_path_404(fake_camera: FakeCamera) -> None:
     assert get(fake_camera, "/settings/unknown?set=1")[0] == 404
 
 
+def test_commands_reply_with_xml_ok(fake_camera: FakeCamera) -> None:
+    code, body = get(fake_camera, "/enabletorch")
+    assert code == 200 and b"<result>Ok</result>" in body
+
+
+def test_sensors_empty_by_default_like_real_phone(fake_camera: FakeCamera) -> None:
+    assert json.loads(get(fake_camera, "/sensors.json")[1]) == {}
+
+
 def test_sensors_battery(fake_camera: FakeCamera) -> None:
+    fake_camera.battery = 96.0
     data = json.loads(get(fake_camera, "/sensors.json")[1])
     assert data["battery_level"]["data"][-1][1][0] == pytest.approx(96.0)
 

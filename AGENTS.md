@@ -61,7 +61,8 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 - Max 30 FPS, digital zoom 1×–10×, exposure −20…+20, no stabilization.
 - Read capabilities from `status.json?show_avail=1` — **do not hard-code** per-phone behavior; the A06 values are only defaults for the fake camera.
 - Phone IP is currently `192.168.8.105:8080`, but it can change — never hard-code it in source.
-- Primary stream: `rtsp://<ip>:8080/h264_ulaw.sdp` · fallback: `http://<ip>:8080/video` (MJPEG).
+- Primary stream: `rtsp://<ip>:8080/h264_ulaw.sdp` (verified: H.264 1080p 30 FPS + μ-law 8 kHz, ~16 Mbps) · fallback: `http://<ip>:8080/video` (MJPEG).
+- Real API quirks (zoom ×100 units, `avail.torch` not `flashmode`, empty sensors, incomplete `avail` while switching) are in [docs/decisions.md](docs/decisions.md#5-verified-on-the-real-phone-2026-11-23).
 
 ## Code Style
 

@@ -1,7 +1,14 @@
 """Turn IP Webcam's status.json / sensors.json into CamDesk models.
 
-Parsing is lenient: missing or odd fields fall back to safe defaults instead of failing,
-because field details differ between IP Webcam versions and phones.
+Field meanings were checked against IP Webcam 1.19 on a Galaxy A06 (2026-11-23):
+- `curvals.zoom` is the ratio × 100 ("100" = 1.0×, "1000" = 10×); `avail.zoom` lists the steps.
+- `avail.torch` is ["on","off"] when the camera has a flashlight, ["off"] when not.
+  (`avail.flashmode` is NOT reliable: the front camera still lists "on".)
+- `avail.focusmode` is ["off"] on a fixed-focus camera.
+- While the phone switches camera (~2–3 s), `avail` is incomplete (no torch/focusmode/zoom).
+  We return None then, so the app keeps the previous capabilities instead of flickering.
+
+Parsing is lenient: odd values fall back to safe defaults instead of failing.
 """
 
 from __future__ import annotations
@@ -14,12 +21,10 @@ from camdesk.core.models import CameraCapabilities, CameraFacing, CameraStatus, 
 
 log = logging.getLogger(__name__)
 
-# IP Webcam's /ptz zoom is 0–100 and doesn't report the phone's max ratio.
-# 10× is common on Android phones (and confirmed on the Galaxy A06 via ADB).
-DEFAULT_ZOOM_MAX_RATIO = 10.0
+ZOOM_UNIT = 100  # curvals.zoom / avail.zoom are ratio × 100
 
 _AUTOFOCUS_MODES = {"auto", "macro", "continuous-video", "continuous-picture", "edof"}
-_TORCH_MODES = {"torch", "on"}
+_CAPABILITY_KEYS = ("torch", "focusmode", "zoom")  # all missing => phone is mid-switch
 
 
 def _on(value: Any) -> bool:
@@ -41,48 +46,45 @@ def _str_list(value: Any) -> tuple[str, ...]:
     return ()
 
 
+def _zoom_ratio(raw: Any) -> float:
+    return max(1.0, _int(raw, ZOOM_UNIT) / ZOOM_UNIT)
+
+
 def parse_status(data: dict[str, Any]) -> CameraStatus:
     cur = data.get(ep.CURVALS) or {}
     return CameraStatus(
         facing=CameraFacing.FRONT if _on(cur.get(ep.KEY_FRONT_CAMERA)) else CameraFacing.BACK,
         torch=_on(cur.get("torch")),
         night_vision=_on(cur.get(ep.KEY_NIGHT_VISION)),
-        focus=_on(cur.get("focus")),
-        zoom_percent=max(0, min(100, _int(cur.get("zoom"), 0))),
+        zoom_ratio=_zoom_ratio(cur.get("zoom")),
         quality=_int(cur.get(ep.KEY_QUALITY), 50),
         exposure=_int(cur.get(ep.KEY_EXPOSURE), 0),
+        focus_mode=str(cur.get("focusmode", "")),
         video_size=str(cur.get(ep.KEY_VIDEO_SIZE, "")),
         orientation=str(cur.get(ep.KEY_ORIENTATION, "landscape")),
     )
 
 
-def parse_capabilities(data: dict[str, Any]) -> CameraCapabilities:
+def parse_capabilities(data: dict[str, Any]) -> CameraCapabilities | None:
+    """Return None when the phone didn't report a complete set (e.g. while switching camera)."""
     cur = data.get(ep.CURVALS) or {}
-    avail = data.get(ep.AVAIL) or {}
-    front = _on(cur.get(ep.KEY_FRONT_CAMERA))
+    avail = data.get(ep.AVAIL)
+    if not isinstance(avail, dict) or not any(k in avail for k in _CAPABILITY_KEYS):
+        return None
 
-    if "flashmode" in avail:
-        has_torch = bool(_TORCH_MODES & {m.lower() for m in _str_list(avail["flashmode"])})
-    else:
-        has_torch = not front  # front cameras rarely have a flash
-
-    if "focusmode" in avail:
-        modes = {m.lower() for m in _str_list(avail["focusmode"])}
-        has_autofocus = bool(_AUTOFOCUS_MODES & modes)
-    else:
-        has_autofocus = not front
-
+    torch_modes = {m.lower() for m in _str_list(avail.get("torch"))}
+    focus_modes = {m.lower() for m in _str_list(avail.get("focusmode"))}
+    zoom_steps = [_int(v, ZOOM_UNIT) for v in _str_list(avail.get("zoom"))]
     exposure = [_int(v, 0) for v in _str_list(avail.get(ep.KEY_EXPOSURE))]
-    exp_min, exp_max = (min(exposure), max(exposure)) if exposure else (0, 0)
 
     return CameraCapabilities(
-        has_torch=has_torch,
-        has_autofocus=has_autofocus,
-        has_front_camera=ep.KEY_FRONT_CAMERA in avail or ep.KEY_FRONT_CAMERA in cur,
-        has_night_vision=ep.KEY_NIGHT_VISION in cur,
-        zoom_max_ratio=DEFAULT_ZOOM_MAX_RATIO if "zoom" in cur else 1.0,
-        exposure_min=exp_min,
-        exposure_max=exp_max,
+        has_torch="on" in torch_modes,
+        has_autofocus=bool(_AUTOFOCUS_MODES & focus_modes),
+        has_front_camera=ep.KEY_FRONT_CAMERA in avail,
+        has_night_vision=ep.KEY_NIGHT_VISION in avail or ep.KEY_NIGHT_VISION in cur,
+        zoom_max_ratio=max(1.0, max(zoom_steps) / ZOOM_UNIT) if zoom_steps else 1.0,
+        exposure_min=min(exposure) if exposure else 0,
+        exposure_max=max(exposure) if exposure else 0,
         video_sizes=_str_list(avail.get(ep.KEY_VIDEO_SIZE)),
         orientations=_str_list(avail.get(ep.KEY_ORIENTATION)),
     )
@@ -97,6 +99,7 @@ def _latest_sensor_value(data: dict[str, Any], key: str) -> float | None:
 
 
 def parse_sensors(data: dict[str, Any]) -> DeviceInfo:
+    """IP Webcam may return {} (sensors off) — then battery stays None and the UI hides it."""
     level = _latest_sensor_value(data, ep.SENSOR_BATTERY_LEVEL)
     charging = _latest_sensor_value(data, ep.SENSOR_BATTERY_CHARGING)
     return DeviceInfo(

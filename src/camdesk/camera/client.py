@@ -61,7 +61,8 @@ class CameraApi:
             raise CameraError("Unexpected reply from the phone — is this IP Webcam?")
         return data
 
-    def status(self) -> tuple[CameraStatus, CameraCapabilities]:
+    def status(self) -> tuple[CameraStatus, CameraCapabilities | None]:
+        """Capabilities are None while the phone is mid camera-switch (keep the old ones)."""
         data = self._json(ep.STATUS, (("show_avail", "1"),))
         return caps.parse_status(data), caps.parse_capabilities(data)
 
@@ -75,7 +76,7 @@ class CameraApi:
 class _Worker(QObject):
     """Lives on the camera thread. All slots run there, one at a time, in order."""
 
-    status_received = Signal(object, object)  # CameraStatus, CameraCapabilities
+    status_received = Signal(object, object)  # CameraStatus, CameraCapabilities | None
     device_info_received = Signal(object)  # DeviceInfo
     command_succeeded = Signal(object)  # Command
     command_failed = Signal(object, str)  # Command, message
@@ -153,7 +154,11 @@ class _Worker(QObject):
 
 
 class CameraClient(QObject):
-    """Thread-safe front door to the phone. Call from the UI thread; listen to signals."""
+    """Thread-safe front door to the phone. Call from the UI thread; listen to signals.
+
+    status_received(status, capabilities): capabilities is None when unchanged/unknown
+    (the phone is switching camera) — keep using the previous value.
+    """
 
     status_received = Signal(object, object)
     device_info_received = Signal(object)

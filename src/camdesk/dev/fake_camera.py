@@ -1,10 +1,11 @@
 """A fake IP Webcam HTTP server, so CamDesk can be developed and tested without the phone.
 
-Defaults mirror the Samsung Galaxy A06 (see docs/decisions.md): the back camera has torch
-and autofocus; the front camera has neither.
-
-NOTE: the JSON shape follows IP Webcam's status.json (curvals/avail). Field details should
-be re-checked against the real phone (build step 2) and this fake updated to match.
+Mirrors IP Webcam 1.19 on the Samsung Galaxy A06, as checked on the real phone (2026-11-23):
+- back camera: torch + autofocus, zoom 1×–10× ("100"…"1000"); front: no torch, fixed focus
+- /ptz?zoom=0–100 sets zoom; curvals.zoom reports ratio × 100
+- commands reply with XML `<result>Ok</result>`; unknown paths are 404
+- sensors.json is `{}` unless sensors are enabled (set `battery` to simulate them)
+- `switching=True` simulates the incomplete `avail` sent while changing camera
 """
 
 from __future__ import annotations
@@ -17,8 +18,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-BACK_FOCUS_MODES = ["auto", "macro", "continuous-video", "continuous-picture", "off"]
-VIDEO_SIZES = ["640x480", "1280x720", "1920x1080"]
+BACK_FOCUS_MODES = ["off", "auto", "macro", "continuous-video", "continuous-picture"]
+FLASH_MODES = ["off", "auto", "on", "red-eye"]  # listed for BOTH cameras on the real phone
+VIDEO_SIZES = ["1920x1080", "1280x720", "640x480"]
+ZOOM_STEPS = [str(100 + 9 * i) for i in range(101)]  # "100" … "1000"
+OK_XML = b'<?xml version="1.0" encoding="UTF-8"?>\n<result>Ok</result>\n'
 
 
 class FakeCamera:
@@ -34,18 +38,19 @@ class FakeCamera:
         self.username = username
         self.password = password
         self.requests: list[str] = []  # paths received, for tests to inspect
-        self.battery = 96.0
+        self.battery: float | None = None  # None = sensors off, like the real phone
         self.charging = True
+        self.switching = False
+        self.focus_requests = 0
         self._lock = threading.Lock()
         self.state: dict[str, str] = {
             "video_size": "1920x1080",
-            "quality": "50",
+            "quality": "49",
             "ffc": "off",
             "torch": "off",
             "night_vision": "off",
-            "focus": "off",
-            "zoom": "0",
-            "exposure": "0",
+            "zoom": "100",
+            "focusmode": "continuous-video",
             "orientation": "landscape",
         }
         self._server = ThreadingHTTPServer((host, port), self._make_handler())
@@ -99,17 +104,25 @@ class FakeCamera:
                 "curvals": dict(self.state),
             }
         if show_avail:
-            body["avail"] = {
-                "video_size": VIDEO_SIZES,
-                "orientation": ["landscape", "upsidedown", "portrait", "upsidedown_portrait"],
+            avail: dict[str, Any] = {
+                "video_size": VIDEO_SIZES[:1] if self.switching else VIDEO_SIZES,
+                "orientation": ["landscape", "portrait", "upsidedown", "upsidedown_portrait"],
                 "ffc": ["on", "off"],
                 "night_vision": ["on", "off"],
-                "focusmode": ["off"] if self.front else BACK_FOCUS_MODES,
-                "flashmode": ["off"] if self.front else ["off", "on", "auto", "torch"],
             }
+            if not self.switching:
+                avail |= {
+                    "torch": ["off"] if self.front else ["on", "off"],
+                    "focusmode": ["off"] if self.front else BACK_FOCUS_MODES,
+                    "flashmode": FLASH_MODES,
+                    "zoom": ZOOM_STEPS,
+                }
+            body["avail"] = avail
         return body
 
     def sensors(self) -> dict[str, Any]:
+        if self.battery is None:
+            return {}
         now = int(time.time() * 1000)
         return {
             "battery_level": {"unit": "%", "data": [[now, [self.battery]]]},
@@ -125,13 +138,13 @@ class FakeCamera:
             elif path == "/disabletorch":
                 self.state["torch"] = "off"
             elif path == "/focus":
-                if not self.front:
-                    self.state["focus"] = "on"
+                self.focus_requests += 1
             elif path == "/nofocus":
-                self.state["focus"] = "off"
+                pass
             elif path == "/ptz":
                 if "zoom" in query:
-                    self.state["zoom"] = str(max(0, min(100, int(query["zoom"][0]))))
+                    percent = max(0, min(100, int(query["zoom"][0])))
+                    self.state["zoom"] = str(100 + 9 * percent)
             elif path.startswith("/settings/"):
                 key = path.removeprefix("/settings/")
                 if key not in self.state or "set" not in query:
@@ -139,7 +152,8 @@ class FakeCamera:
                 self.state[key] = query["set"][0]
                 if key == "ffc":
                     self.state["torch"] = "off"
-                    self.state["focus"] = "off"
+                    self.state["zoom"] = "100"
+                    self.state["focusmode"] = "off" if self.front else "continuous-video"
             else:
                 return False
         return True
@@ -181,7 +195,7 @@ class FakeCamera:
                 elif url.path == "/sensors.json":
                     self._send(200, json.dumps(camera.sensors()).encode(), "application/json")
                 elif camera.apply(url.path, query):
-                    self._send(200, b"Ok", "text/plain")
+                    self._send(200, OK_XML, "text/xml")
                 else:
                     self._send(404, b"Not found", "text/plain")
 
