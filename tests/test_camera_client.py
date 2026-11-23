@@ -72,11 +72,6 @@ def test_api_rejected_command(fake_camera: FakeCamera) -> None:
 # -- CameraClient (threaded) ----------------------------------------------
 
 
-@pytest.fixture(scope="module")
-def qapp() -> QCoreApplication:
-    return QCoreApplication.instance() or QCoreApplication([])
-
-
 @pytest.fixture
 def client(qapp: QCoreApplication) -> Iterator[CameraClient]:
     c = CameraClient()

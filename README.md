@@ -2,7 +2,7 @@
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
-> Status: **in development** — Version 1, build steps 1–3 done (project setup, camera control, video stream service).
+> Status: **in development** — Version 1, build steps 1–4 done (setup, camera control, video stream, live OpenGL preview).
 
 ## Requirements
 
@@ -16,6 +16,7 @@ A smooth, modern Windows desktop app to view, record and control an Android phon
 ```powershell
 uv sync                          # install dependencies
 uv run python -m camdesk         # run the app
+uv run python -m camdesk --host 192.168.8.105   # first run: phone IP (remembered after)
 uv run python -m camdesk --fake  # run with the built-in fake camera (no phone needed)
 uv run pytest                    # run tests
 uv run ruff check .              # lint

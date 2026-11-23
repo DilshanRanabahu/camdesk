@@ -15,11 +15,6 @@ from qt_helpers import SignalRecorder
 FAST_BACKOFF = (0.01, 0.02)
 
 
-@pytest.fixture(scope="module")
-def qapp() -> QCoreApplication:
-    return QCoreApplication.instance() or QCoreApplication([])
-
-
 def wait_for_state(states: SignalRecorder, wanted: ConnectionState, timeout_s: float = 5.0) -> None:
     deadline = time.monotonic() + timeout_s
     while not any(args[0] is wanted for args in states.calls):

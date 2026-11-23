@@ -64,6 +64,13 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 - Primary stream: `rtsp://<ip>:8080/h264_aac.sdp` (verified: H.264 1080p 30 FPS + AAC 44.1 kHz, ~16 Mbps; **not** `h264_ulaw.sdp` — MKV can't store μ-law) · fallback: `http://<ip>:8080/video` (MJPEG).
 - Real API quirks (zoom ×100 units, `avail.torch` not `flashmode`, empty sensors, incomplete `avail` while switching) are in [docs/decisions.md](docs/decisions.md#5-verified-on-the-real-phone-2026-11-23).
 
+## PySide6 Gotchas (learned the hard way)
+
+- `QShaderProgram.setUniformValueArray(loc, data, 1, 9)` uploads **nothing** for a `mat3` → black video. Use `QMatrix3x3`.
+- Upload textures by passing NumPy arrays straight to `glTexImage2D/glTexSubImage2D`; raw `int` pointers are rejected.
+- `QSignalSpy.wait()` holds the GIL — see Testing.
+- Any GL change must keep `tests/test_video_widget.py` (renders real frames, checks pixel colors) passing.
+
 ## Code Style
 
 - Type hints everywhere; `from __future__ import annotations` at the top of each module.

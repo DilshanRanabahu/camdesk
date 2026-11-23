@@ -31,10 +31,21 @@ LOW_LATENCY_OPTIONS = {
 }
 
 
+# FFmpeg enum values (AVColorRange / AVColorSpace)
+_RANGE_JPEG = 2
+_SPACE_BT709 = 1
+_JPEG_FORMATS = {"yuvj420p": YUV420P}  # same layout as yuv420p, but full range
+
+
 def frame_from_av(frame: av.VideoFrame, received_at: float) -> VideoFrame:
     """Wrap an av.VideoFrame without copying pixel data when the format is drawable."""
-    if frame.format.name not in SUPPORTED_FORMATS:
-        frame = frame.reformat(format=YUV420P)  # rare: e.g. yuvj420p from MJPEG
+    fmt = frame.format.name
+    full_range = int(getattr(frame, "color_range", 0) or 0) == _RANGE_JPEG
+    if fmt in _JPEG_FORMATS:  # MJPEG: draw as-is with the full-range shader path
+        fmt, full_range = _JPEG_FORMATS[fmt], True
+    elif fmt not in SUPPORTED_FORMATS:
+        frame = frame.reformat(format=YUV420P)  # rare formats: convert once on the CPU
+        fmt = YUV420P
     planes = tuple(
         np.frombuffer(p, dtype=np.uint8).reshape(p.height, p.line_size) for p in frame.planes
     )
@@ -42,10 +53,12 @@ def frame_from_av(frame: av.VideoFrame, received_at: float) -> VideoFrame:
     return VideoFrame(
         width=frame.width,
         height=frame.height,
-        format=frame.format.name,
+        format=fmt,
         planes=planes,
         pts_s=pts_s,
         received_at=received_at,
+        full_range=full_range,
+        bt709=int(getattr(frame, "colorspace", 0) or 0) == _SPACE_BT709,
         keepalive=frame,
     )
 

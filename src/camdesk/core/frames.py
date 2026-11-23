@@ -33,6 +33,8 @@ class VideoFrame:
     planes: tuple[np.ndarray, ...]
     pts_s: float | None = None  # presentation time in seconds (stream clock)
     received_at: float = 0.0  # time.perf_counter() when the frame was decoded
+    full_range: bool = False  # True: 0–255 (JPEG); False: 16–235 (TV/video)
+    bt709: bool = False  # color matrix: BT.709 (HD) if True, else BT.601
     keepalive: Any = field(default=None, repr=False, compare=False)
 
     def row_bytes(self, plane: int) -> int:
@@ -82,6 +84,12 @@ class LatestFrameBuffer:
             self._taken = True
             self.delivered += 1
             return self._frame
+
+    @property
+    def has_new(self) -> bool:
+        """A frame is waiting that the consumer hasn't taken yet."""
+        with self._lock:
+            return not self._taken
 
     def peek(self) -> VideoFrame | None:
         """The most recent frame, taken or not (e.g. for snapshots or redraws)."""

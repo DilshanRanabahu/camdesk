@@ -33,11 +33,11 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 - [ ] 4. Remember the last camera used
 
 ### Live View
-- [ ] 5. Smooth live video with GPU decoding (RTSP H.264, MJPEG fallback)
-- [ ] 6. Fullscreen mode (double-click or F11)
-- [ ] 7. View modes: fit / fill / original size
+- [x] 5. Smooth live video with GPU decoding (RTSP H.264, MJPEG fallback)
+- [x] 6. Fullscreen mode (double-click or F11)
+- [x] 7. View modes: fit / fill / original size (`V` key for now; UI control in step 7)
 - [ ] 8. On-screen FPS, resolution and latency
-- [ ] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use
+- [x] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use
 
 ### Capture
 - [ ] 9. Snapshot (button or Space), saved with timestamp

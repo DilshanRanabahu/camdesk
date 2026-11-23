@@ -1,7 +1,8 @@
-"""Rolling-window counters for FPS and bitrate."""
+"""Rolling-window counters for FPS and bitrate, and a process CPU meter."""
 
 from __future__ import annotations
 
+import os
 import time
 from collections import deque
 from collections.abc import Callable
@@ -52,3 +53,26 @@ class RateCounter:
     def reset(self) -> None:
         self._events.clear()
         self._bytes = 0
+
+
+class CpuMeter:
+    """CPU used by this process since the last sample.
+
+    `sample()` returns (percent_of_one_core, percent_of_whole_cpu). The second number is
+    what Task Manager shows, and is what the "< 10% CPU" target refers to.
+    """
+
+    def __init__(self) -> None:
+        self.cores = os.cpu_count() or 1
+        self._wall = time.perf_counter()
+        self._cpu = time.process_time()
+
+    def sample(self) -> tuple[float, float]:
+        wall, cpu = time.perf_counter(), time.process_time()
+        elapsed = wall - self._wall
+        used = cpu - self._cpu
+        self._wall, self._cpu = wall, cpu
+        if elapsed <= 0:
+            return 0.0, 0.0
+        one_core = used / elapsed * 100
+        return one_core, one_core / self.cores

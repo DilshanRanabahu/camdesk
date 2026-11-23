@@ -36,6 +36,8 @@ Final decisions for the project. Anything not listed here follows [architecture.
 | 20 | Qt package | **PySide6-Essentials** (not full `PySide6`) | Has everything CamDesk needs (Widgets, OpenGL, Test); skips WebEngine/3D/Multimedia add-ons — much smaller download and `.exe` |
 | 21 | Frame types location | `VideoFrame` + `LatestFrameBuffer` in `core/frames.py` (not `stream/`) | The UI's video widget reads frames, and the UI may only import `core/` |
 | 22 | Low-latency input | FFmpeg `fflags=nobuffer` for the camera | Lower delay; drops only the single frame read while probing at connect time |
+| 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
+| 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 
 ### Security
@@ -186,7 +188,20 @@ Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
 | Frames dropped | 0 | 0 |
 | Frame handoff to UI | 0.5 ms median | 1.2 ms median |
 
+### Live preview on the real phone (build step 4)
+| Measurement | Result | Target |
+|---|---|---|
+| Render rate | **29.6–30 FPS** (1080p) | 30 FPS ✅ |
+| CamDesk CPU | **~2% of the PC** (≈16% of one core, 8 cores) | < 10% ✅ |
+| Frames dropped | 0 (except while a test saved a screenshot) | ✅ |
+| Decode → screen inside CamDesk | ~2 ms | ✅ |
+| Camera → frame decoded on PC (screen-flash test) | **~225 ms** (216–270) | ~200 ms ⚠️ |
+| Glass-to-glass (adds one display refresh) | **~240–250 ms** | ~200 ms ⚠️ |
+
+Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering). To try later: 1280×720 and/or lower quality on the phone.
+
 ### Open question
+- **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).
 - **Bitrate:** 16 Mbps is heavy for 2.4 GHz Wi-Fi and disk space. Consider lowering IP Webcam's video quality, or 1280×720, if the stream stutters. To be checked with the debug overlay in build step 4.
 
 ## 6. Future Idea (not in V1)

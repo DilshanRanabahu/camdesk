@@ -210,6 +210,7 @@ camara/
 │       │   ├── connect_view.py   # First-launch / connect screen
 │       │   ├── status_bar.py
 │       │   ├── strings.py        # All user-facing text (English)
+│       │   ├── preview_window.py # TEMPORARY (step 4): bare live-video window until MainWindow (step 6)
 │       │   ├── video/
 │       │   │   ├── video_widget.py   # QOpenGLWidget, texture upload, view modes
 │       │   │   ├── shaders.py        # NV12 + RGB shaders
