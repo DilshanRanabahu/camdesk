@@ -4,7 +4,9 @@ Modern, minimal, dark interface. The video is the hero; everything else stays ou
 
 Related docs: [feature.md](feature.md) · [decisions.md](decisions.md) · [architecture.md](architecture.md)
 
-Language: **English only**. All user-facing text lives in one module so wording stays consistent.
+Language: **English only**. All user-facing text lives in one module (`ui/strings.py`) so wording stays consistent.
+
+> **Implementation status (step 4):** design tokens (`ui/theme/tokens.py`), the OpenGL video area and the `Ctrl+D` debug overlay are built. A temporary bare preview window stands in for the main window until step 6; the title bar, connect screen, control dock, side panel, status bar and toasts come in steps 6–9.
 
 ---
 
@@ -102,7 +104,7 @@ Language: **English only**. All user-facing text lives in one module so wording 
 | **Video area** | Fills remaining space, black letterbox. Overlays: REC badge (top-left), FPS/latency (top-right), control dock (bottom-center). |
 | **Control dock** | Floating pill, glass effect: Snapshot · Record · Switch camera · Focus · Fullscreen. Auto-hides after 3 s of no mouse movement. |
 | **Side panel** | 260 px, collapsible (`◧` button or `Tab`). Grouped cards: Camera, Image, Advanced (collapsed by default). |
-| **Status bar** | Connection, battery, disk space, decoder in use. |
+| **Status bar** | Connection, battery (only when the phone reports it), disk space, decoder in use. |
 
 **Minimum window size:** 960 × 600. Below 1100 px wide, the side panel collapses automatically.
 
@@ -197,13 +199,13 @@ Animations never touch the video widget — only overlays — so playback stays 
 - **Auto-hide controls** in fullscreen and when idle for 3 s; any mouse movement brings them back.
 - **Auto-reconnect** quietly in the background; only show an error after repeated failures.
 - **Remember everything** — last camera, window size/position, panel open/closed, settings.
-- **Low battery warning** — toast when phone battery < 20%.
+- **Low battery warning** — toast when phone battery < 20% (only if the phone reports battery).
 - **Low disk warning** — before and during recording when free space < 2 GB.
 - **Tap-to-focus** — click on the video shows a focus ring animation at that spot.
 - **Scroll to zoom** — mouse wheel over the video changes zoom.
 - **Optimistic controls** — toggles update instantly; revert with a toast if the phone rejects the change.
 - **Camera-aware controls** — on the front camera, Flashlight and tap-to-focus are disabled (Galaxy A06 front camera has no flash and fixed focus). Controls come from what the phone reports, not hard-coded.
-- **Debug overlay** (`Ctrl+D`) — small mono panel top-right: CPU, FPS, latency, bitrate, decoder.
+- **Debug overlay** (`Ctrl+D`) — ✅ built. Small mono panel top-right: render FPS, stream FPS, resolution, decoder, source, bitrate, frame age, dropped frames, CPU (% of PC and of one core).
 
 ---
 
@@ -222,6 +224,7 @@ Animations never touch the video widget — only overlays — so playback stays 
 | `Tab` | Toggle side panel |
 | `Ctrl + ,` | Settings |
 | `Ctrl + D` | Debug overlay |
+| `V` | Cycle view mode (fit / fill / original) |
 
 ---
 

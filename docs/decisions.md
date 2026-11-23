@@ -2,7 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Date:** 2026-11-23
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-23 (after build step 4)
+
+Decisions 18–26 were made during development; each row says why.
 
 ---
 
@@ -29,16 +31,17 @@ Final decisions for the project. Anything not listed here follows [architecture.
 |---|---|---|---|
 | 6 | Python environment | **uv** with a lock file | Fast installs, exact same package versions every build |
 | 7 | Version control | **Git**, one commit per build step | Easy to roll back; clear history |
-| 10 | Testing | Unit tests for logic + **fake camera** (plays a video file) | Develop and test without the phone |
-| 11 | Performance check | Debug overlay (CPU, FPS, latency), checked at build step 4 | Prove the smoothness target early |
+| 26 | Hosting | **Public GitHub repo** [DilshanRanabahu/camdesk](https://github.com/DilshanRanabahu/camdesk); commits use the GitHub **noreply** email | Personal email kept private (history rewritten before the first push) |
+| 10 | Testing | Unit tests + **fake camera** (HTTP API) + **fake video** (moving test pattern) + GL render tests that read back pixels | Develop and test without the phone; 99 tests at step 4 |
+| 11 | Performance check | Debug overlay (CPU, FPS, latency), checked at build step 4 | Done — results in section 5 |
 | 18 | MJPEG fallback decoder | **PyAV (FFmpeg)** instead of PyTurboJPEG | PyTurboJPEG needs a separate native libjpeg-turbo install on Windows; FFmpeg's decoder is already bundled and fast enough for a fallback |
 | 19 | Fake camera location | `src/camdesk/dev/` (not `tests/`) | `--fake` mode in the app needs it, not just tests |
 | 20 | Qt package | **PySide6-Essentials** (not full `PySide6`) | Has everything CamDesk needs (Widgets, OpenGL, Test); skips WebEngine/3D/Multimedia add-ons — much smaller download and `.exe` |
 | 21 | Frame types location | `VideoFrame` + `LatestFrameBuffer` in `core/frames.py` (not `stream/`) | The UI's video widget reads frames, and the UI may only import `core/` |
 | 22 | Low-latency input | FFmpeg `fflags=nobuffer` for the camera | Lower delay; drops only the single frame read while probing at connect time |
+| 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
-| 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 
 ### Security
 | # | Topic | Decision | Reason |
@@ -92,7 +95,7 @@ Final decisions for the project. Anything not listed here follows [architecture.
 | Max frame rate | 30 FPS | 30 FPS |
 | Zoom | 1× – 10× (digital only) | 1× – 10× (digital only) |
 | ISO range | 25 – 16000 | 75 – 8000 |
-| Exposure compensation | −20 to +20 steps | −20 to +20 steps |
+| Exposure compensation | −20 to +20 steps (sensor; IP Webcam 1.19 doesn't expose it) | −20 to +20 steps |
 | Optical / video stabilization | ❌ None | ❌ None |
 | Camera API level | LEVEL_3 (full manual control) | LEVEL_3 |
 
@@ -110,6 +113,7 @@ Also on the back: a 2 MP depth sensor (1600 × 1200, fixed focus) — not useful
 | Item | Value |
 |---|---|
 | Phone IP | **192.168.8.105** (may change — see recommendations) |
+| PC | Wired (Ethernet) to the same router, 192.168.8.100 |
 | Wi-Fi | 2.4 GHz, 802.11n |
 | Signal | −29 dBm (excellent) |
 | Link speed | 65–72 Mbps (1080p stream needs ~4–8 Mbps ✅) |
@@ -125,10 +129,11 @@ Also on the back: a 2 MP depth sensor (1600 × 1200, fixed focus) — not useful
 | Front camera is fixed focus | Disable **tap-to-focus** on the front camera |
 | Zoom is digital only, max 10× | Zoom slider range 1×–10× |
 | No stabilization | Recommend a tripod/stand; no stabilization toggle in UI |
-| Exposure range −20 to +20 | Exposure slider (V2) uses this range |
-| Strong Wi-Fi, 2.4 GHz | 1080p is fine; 2.4 GHz can be crowded — show bitrate in debug overlay |
+| Exposure range −20 to +20 (sensor) | IP Webcam doesn't offer it → exposure control stays hidden unless a phone reports it |
+| Strong Wi-Fi, 2.4 GHz | 1080p @ 16 Mbps plays with 0 dropped frames (step 4); bitrate shown in the debug overlay |
 | Phone IP can change | Remember camera by name, and show a clear "camera not found" message with the new-IP hint |
 | 4 GB RAM, Samsung battery manager | Samsung may kill IP Webcam in the background — see phone setup below |
+| No battery data from IP Webcam | Battery hidden in the status bar |
 
 ---
 
@@ -145,6 +150,7 @@ Also on the back: a 2 MP depth sensor (1600 × 1200, fixed focus) — not useful
 | Login | Username + password **on** |
 | Stay awake / prevent sleep | On |
 | Power | Keep phone **plugged in** for long sessions |
+| Orientation | Match how the phone stands (upright phone → `portrait`), or use CamDesk's rotate control (step 7) |
 
 **Samsung-specific (important):**
 1. Settings → Apps → IP Webcam → Battery → **Unrestricted**
@@ -200,9 +206,9 @@ Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
 
 Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering). To try later: 1280×720 and/or lower quality on the phone.
 
-### Open question
+### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).
-- **Bitrate:** 16 Mbps is heavy for 2.4 GHz Wi-Fi and disk space. Consider lowering IP Webcam's video quality, or 1280×720, if the stream stutters. To be checked with the debug overlay in build step 4.
+- **Disk use:** 16 Mbps ≈ 7 GB per hour of recording. Playback is smooth at this bitrate (step 4), but lower quality may be worth it before recording lands (step 8).
 
 ## 6. Future Idea (not in V1)
 

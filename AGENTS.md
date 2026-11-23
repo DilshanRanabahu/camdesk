@@ -15,6 +15,12 @@ Instructions for AI coding agents (Claude Code, Copilot, Cursor, etc.) working o
 
 If a request conflicts with these docs, say so and ask before proceeding. If a decision changes, update the doc in the same change.
 
+## Current Status
+
+- Version 1 build steps **1–4 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 5, AppState + AppController.
+- `ui/preview_window.py` is a **temporary** window wired directly in `app.py`; `MainWindow` replaces it in step 6.
+- Repo: https://github.com/DilshanRanabahu/camdesk (public, branch `main`).
+
 ## Stack
 
 Python 3.12 · **uv** · PySide6-Essentials (Qt 6 — do not add the full `PySide6` / Addons package) · PyAV (FFmpeg) · httpx · numpy · keyring · OpenCV (V2) · pytest · ruff · Nuitka
@@ -25,8 +31,10 @@ Do not add a dependency without a clear reason; mention it in the summary of you
 
 ```powershell
 uv sync                          # Install / update dependencies
-uv run python -m camdesk         # Run the app
+uv run python -m camdesk         # Run the app (last camera from settings)
+uv run python -m camdesk --host 192.168.8.105   # Set and remember the phone IP
 uv run python -m camdesk --fake  # Run with the fake camera (no phone needed)
+uv run python -m camdesk --debug --debug-overlay   # Verbose log + Ctrl+D panel shown
 uv run pytest                    # Run tests
 uv run ruff check .              # Lint
 uv run ruff format .             # Format
@@ -34,6 +42,7 @@ uv run ruff format .             # Format
 ```
 
 Always use `uv run` / `uv add` — never `pip install` and never activate a different Python.
+uv was installed with winget; a terminal opened before that may not have it on `PATH` (open a new one).
 
 ## Architecture Rules (must follow)
 
@@ -44,6 +53,7 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 5. All camera URLs and setting keys live in **`camera/endpoints.py`** only. No URL strings anywhere else.
 6. All colors, sizes and fonts come from **`ui/theme/tokens.py`**. No hex colors or pixel sizes hard-coded in widgets.
 7. All user-facing text lives in one module (`ui/strings.py`). English only.
+8. **`app.py` is the composition root** — the only module that imports both services and UI to wire them together.
 
 ## Performance Rules (the main goal)
 
@@ -58,7 +68,7 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 ## Camera Facts (Galaxy A06 + IP Webcam 1.19)
 
 - Back camera (ID 0): torch ✅, autofocus ✅. Front camera (ID 1): **no torch, fixed focus**.
-- Max 30 FPS, digital zoom 1×–10×, exposure −20…+20, no stabilization.
+- Max 30 FPS, digital zoom 1×–10×, no stabilization. The sensor has exposure −20…+20, but IP Webcam 1.19 doesn't expose it.
 - Read capabilities from `status.json?show_avail=1` — **do not hard-code** per-phone behavior; the A06 values are only defaults for the fake camera.
 - Phone IP is currently `192.168.8.105:8080`, but it can change — never hard-code it in source.
 - Primary stream: `rtsp://<ip>:8080/h264_aac.sdp` (verified: H.264 1080p 30 FPS + AAC 44.1 kHz, ~16 Mbps; **not** `h264_ulaw.sdp` — MKV can't store μ-law) · fallback: `http://<ip>:8080/video` (MJPEG).
@@ -86,6 +96,7 @@ Always use `uv run` / `uv add` — never `pip install` and never activate a diff
 - Every service and model change needs a test in `tests/`.
 - Tests must **not** need the real phone or network: use `camdesk.dev.fake_camera` (fixture `fake_camera` in `tests/conftest.py`) and `camdesk.dev.fake_video_source`. They live in `src/` so `--fake` mode can use them too.
 - Tests run with `CAMDESK_HOME` pointed at a temp folder (autouse fixture), so they never touch real settings, logs or captures.
+- Use the session-wide `qapp` fixture (a `QApplication`) for anything Qt; don't create your own `QCoreApplication`.
 - UI code: test logic in `core/` instead of testing widgets directly.
 - Waiting on Qt signals from worker threads: use `SignalRecorder` from `tests/qt_helpers.py`, **not** `QSignalSpy.wait()` — PySide6's `QSignalSpy.wait()` holds the GIL, so Python slots on worker threads never run and the test times out.
 - Run `uv run pytest` and `uv run ruff check .` before saying a task is done. Report failures honestly.
@@ -103,7 +114,8 @@ ADB is installed and the phone may be connected by USB.
 - One commit per build step or feature (see build order in [docs/architecture.md](docs/architecture.md#10-build-order-version-1)).
 - Message style: `feat: …`, `fix: …`, `refactor: …`, `docs: …`, `test: …`, `chore: …`.
 - Commit `uv.lock`. Never commit `.venv/`, `dist/`, `build/`, recordings, snapshots, logs or passwords.
-- Only commit or push when the user asks.
+- Only commit or push when the user asks. Remote: `origin` → GitHub `DilshanRanabahu/camdesk` (**public**).
+- This repo's `user.email` is the GitHub **noreply** address. Never put a personal email in commits or files (e.g. `pyproject.toml` authors).
 
 ## Privacy & Security
 

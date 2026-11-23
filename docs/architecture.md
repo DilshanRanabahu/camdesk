@@ -4,6 +4,8 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
+> **Status:** build steps 1–4 done (✅ in the folder tree and build order). `app.py` is the composition root: until AppState/AppController (step 5) it wires the stream straight to a temporary preview window.
+
 ---
 
 ## 1. Architecture Overview
@@ -44,10 +46,10 @@ The key to smoothness: the **main (UI) thread never decodes, waits on the networ
 | Thread | Owner | Work | Rate |
 |---|---|---|---|
 | **Main / UI** | Qt | Widgets, input, OpenGL texture upload + draw | Display refresh (60 Hz) |
-| **Stream** | `StreamService` (QThread) | RTSP read → GPU decode (D3D11VA) → put frame in buffer; pass packets to recorder | Camera FPS |
+| **Stream** | `StreamService` (Python thread; emits Qt signals) | RTSP read → GPU decode (D3D11VA) → put frame in buffer; pass packets to recorder | Camera FPS |
 | **Recorder** | `Recorder` (QThread + queue) | Remux H.264 + AAC audio packets → MKV (no re-encode), new file every 30 min | Camera FPS |
-| **Control** | `CameraClient` (QThread + command queue) | HTTP commands to phone, in order | On demand |
-| **Poller** | `StatusPoller` (QTimer in control thread) | `status.json` + `sensors.json` (battery, settings) | Every 5 s |
+| **Control** | `CameraClient` (QThread; its event queue keeps commands in order) | HTTP commands to phone; re-reads status after each one | On demand |
+| **Poller** | QTimer inside the `CameraClient` thread | `status.json` + `sensors.json` (settings, capabilities, battery) | Every 5 s |
 | **Motion** (V2) | `MotionDetector` (QThread) | Downscaled grayscale diff | ~5 FPS |
 | **Snapshot** | `QThreadPool` task | Encode + save JPEG | On demand |
 
@@ -67,14 +69,14 @@ The stream thread reads **compressed H.264 video and AAC audio packets** from th
  Phone ──RTSP/TCP──▶ PyAV demux ──packet──┬──▶ Recorder queue ──▶ MKV file (video + audio, 30-min parts)
                     (Stream thread)       │
                                           └──▶ D3D11VA decode (GPU)
-                                                   │ NV12 frame
+                                                   │ NV12 frame (zero-copy NumPy views)
                                                    ▼
                                           LatestFrameBuffer  (size 1, overwrite)
                                                    │ "frame_ready" signal (coalesced)
                                                    ▼
                                     VideoWidget (QOpenGLWidget, UI thread)
-                                      upload Y + UV planes as 2 textures
-                                      fragment shader: NV12 → RGB
+                                      upload planes as textures (row padding skipped)
+                                      fragment shader: YUV → RGB (BT.601/709, TV/full range)
                                                    │
                                                    ▼
                                                 Screen
@@ -86,7 +88,11 @@ The stream thread reads **compressed H.264 video and AAC audio packets** from th
 3. **NV12 → RGB in a shader** — skips CPU color conversion (the biggest CPU cost in most Python video apps).
 4. **Low-latency FFmpeg options** — `rtsp_transport=tcp`, `fflags=nobuffer`, `flags=low_delay`, small probe size.
 5. **Hardware decode fallback chain** — D3D11VA → DXVA2 → software (logged + shown in status bar).
-6. **MJPEG fallback** — if RTSP fails, `MjpegSource` reads `/video` and decodes with PyAV's MJPEG decoder (FFmpeg, multi-threaded) — same widget, same buffer.
+6. **MJPEG fallback** — every 2nd failed RTSP attempt switches source; `MjpegSource` reads `/video` with FFmpeg's MJPEG decoder — same widget, same buffer.
+7. **Zero-copy frames** — decoded planes are NumPy views into FFmpeg's memory; the only copy is the GPU upload.
+8. **Repaint watchdog** — a 100 ms timer repaints if a frame is waiting, so a missed `update()` can't stall the video.
+
+**Measured (step 4, real phone):** 1080p @ 30 FPS, ~2% CPU of the PC, 0 dropped frames, ~2 ms decode→screen, ~225 ms camera→PC.
 
 Both RTSP and MJPEG implement the same `VideoSource` interface, so the rest of the app doesn't care which is used.
 
@@ -94,21 +100,26 @@ Both RTSP and MJPEG implement the same `VideoSource` interface, so the rest of t
 
 ## 4. State & Data Flow
 
-### AppState (single source of truth)
+### AppState (single source of truth — planned, step 5)
 ```python
 class AppState(QObject):
-    connection_changed = Signal(
-        ConnectionState
-    )  # IDLE, CONNECTING, CONNECTED, RECONNECTING, FAILED
-    stream_info_changed = Signal(StreamInfo)  # resolution, fps, latency, decoder
-    camera_status_changed = Signal(CameraStatus)  # torch, night, zoom, quality, front cam...
-    capabilities_changed = Signal(
-        CameraCapabilities
-    )  # has_torch, has_autofocus, zoom range... per active camera
-    device_info_changed = Signal(DeviceInfo)  # battery, phone name
-    recording_changed = Signal(RecordingState)  # active, elapsed, file path
-    notification = Signal(Toast)  # messages for the toast system
+    # IDLE, CONNECTING, CONNECTED, RECONNECTING, FAILED
+    connection_changed = Signal(ConnectionState)
+    # resolution, fps, bitrate, decoder
+    stream_info_changed = Signal(StreamInfo)
+    # torch, night vision, zoom ratio, quality, front camera…
+    camera_status_changed = Signal(CameraStatus)
+    # has_torch, has_autofocus, zoom range… for the active camera
+    capabilities_changed = Signal(CameraCapabilities)
+    # battery (None when the phone doesn't report it)
+    device_info_changed = Signal(DeviceInfo)
+    # active, elapsed, part, file path
+    recording_changed = Signal(RecordingState)
+    # messages for the toast system
+    notification = Signal(Toast)
 ```
+
+The data models it carries already exist in `core/models.py`.
 
 ### Example flow — user turns on the flashlight
 ```
@@ -129,61 +140,62 @@ Controls are enabled from what the phone reports (`status.json?show_avail=1`), n
 | Zoom | 1×–10× | 1×–10× |
 | Max FPS | 30 | 30 |
 
-When the user switches camera, `CameraClient` re-reads capabilities and `AppState.capabilities_changed` updates the UI.
+When the user switches camera, `CameraClient` re-reads capabilities and `AppState.capabilities_changed` updates the UI. While the phone is mid-switch (~2–3 s) it reports an incomplete list; the client then sends `None` and the previous capabilities are kept.
 
 ### Example flow — Wi-Fi drops
 ```
-StreamService read timeout ─▶ state RECONNECTING ─▶ UI dims last frame
-   retry with backoff (0.5s, 1s, 2s, 4s … max 10s)
-   success ─▶ CONNECTED   |   5 failures ─▶ FAILED (Retry button shown)
+StreamService read timeout (3 s) ─▶ state RECONNECTING ─▶ UI dims last frame (step 9)
+   retry with backoff (0.5s, 1s, 2s, 4s … max 10s); every 2nd failure tries MJPEG
+   first frame ─▶ CONNECTED   |   5 failures in a row ─▶ FAILED (Retry button)
 ```
 
 ---
 
 ## 5. Folder Structure
 
+✅ = built · no mark = planned
+
 ```
 camara/
-├── docs/                         # Project documentation
-│   ├── README.md                 # Docs index
-│   ├── decisions.md              # Approved decisions + target hardware
-│   ├── feature.md                # Feature list
-│   ├── ui-design.md              # UI/UX spec
-│   └── architecture.md           # This file
-├── AGENTS.md                     # Rules for AI coding agents
-├── CLAUDE.md                     # Points Claude Code to AGENTS.md
-├── README.md                     # Setup + run instructions
-├── pyproject.toml                # Dependencies, tool config (ruff, pytest) — managed by uv
-├── uv.lock                       # Exact package versions (committed)
-├── .python-version               # 3.12
-├── .gitignore
+├── docs/                         # ✅ Project documentation
+│   ├── README.md                 # ✅ Docs index + progress
+│   ├── decisions.md              # ✅ Decisions, target hardware, measurements
+│   ├── feature.md                # ✅ Feature list with progress
+│   ├── ui-design.md              # ✅ UI/UX spec
+│   └── architecture.md           # ✅ This file
+├── AGENTS.md                     # ✅ Rules for AI coding agents
+├── CLAUDE.md                     # ✅ Points Claude Code to AGENTS.md
+├── README.md                     # ✅ Setup + run instructions
+├── pyproject.toml                # ✅ Dependencies, tool config (ruff, pytest) — managed by uv
+├── uv.lock                       # ✅ Exact package versions (committed)
+├── .python-version               # ✅ 3.12
+├── .gitignore                    # ✅
 │
 ├── src/
 │   └── camdesk/
-│       ├── __init__.py
-│       ├── __main__.py           # Entry point: `python -m camdesk`
-│       ├── app.py                # Creates QApplication, AppState, services, MainWindow
+│       ├── __init__.py           # ✅
+│       ├── __main__.py           # ✅ Entry point: `python -m camdesk`
+│       ├── app.py                # ✅ Composition root: args, logging, settings, services → UI
 │       │
 │       ├── core/                 # Plain Python — no Qt widgets, no network
-│       │   ├── models.py         # Dataclasses: CameraProfile, StreamInfo, CameraStatus, DeviceInfo…
-│       │   ├── frames.py         # VideoFrame + LatestFrameBuffer (in core so the UI may read frames)
-│       │   ├── state.py          # AppState (QObject + signals)
-│       │   ├── controller.py     # AppController — handles user actions, wires services
-│       │   └── errors.py         # App-specific exceptions
+│       │   ├── models.py         # ✅ Dataclasses: CameraProfile, StreamInfo, CameraStatus, DeviceInfo…
+│       │   ├── frames.py         # ✅ VideoFrame + LatestFrameBuffer (in core so the UI may read frames)
+│       │   ├── state.py          # AppState (QObject + signals) — step 5
+│       │   ├── controller.py     # AppController — handles user actions — step 5
+│       │   └── errors.py         # ✅ App-specific exceptions
 │       │
 │       ├── camera/               # Talking to the IP Webcam HTTP API
-│       │   ├── endpoints.py      # All URLs + setting keys in one place
-│       │   ├── client.py         # CameraClient — command queue thread (httpx)
-│       │   ├── capabilities.py   # Parse status.json?show_avail=1 → CameraCapabilities
-│       │   ├── poller.py         # StatusPoller — battery + settings every 5 s
+│       │   ├── endpoints.py      # ✅ All URLs + setting keys in one place
+│       │   ├── client.py         # ✅ CameraApi (sync) + CameraClient (thread, 5 s status poll)
+│       │   ├── capabilities.py   # ✅ Parse status.json?show_avail=1 → CameraCapabilities
 │       │   └── adb.py            # V3: USB mode (adb forward), start/stop IP Webcam
 │       │
 │       ├── stream/               # Video input
-│       │   ├── source.py         # VideoSource interface (abstract)
-│       │   ├── rtsp_source.py    # PyAV RTSP + hardware decode
-│       │   ├── mjpeg_source.py   # MJPEG fallback (PyAV / FFmpeg decoder)
-│       │   ├── hwaccel.py        # D3D11VA → DXVA2 → software selection
-│       │   └── service.py        # StreamService — thread, reconnect/backoff, stats
+│       │   ├── source.py         # ✅ VideoSource interface (abstract)
+│       │   ├── rtsp_source.py    # ✅ PyAV RTSP + hardware decode (+ generic PyAvSource)
+│       │   ├── mjpeg_source.py   # ✅ MJPEG fallback (PyAV / FFmpeg decoder)
+│       │   ├── hwaccel.py        # ✅ D3D11VA → DXVA2 → software selection
+│       │   └── service.py        # ✅ StreamService — thread, reconnect/backoff, fallback, stats
 │       │
 │       ├── capture/              # Saving to disk
 │       │   ├── recorder.py       # Packet remux → MKV (video + audio), 30-min segments at keyframes
@@ -196,25 +208,25 @@ camara/
 │       │   └── timelapse.py
 │       │
 │       ├── config/
-│       │   ├── settings.py       # Load/save user settings (JSON, versioned, atomic write)
-│       │   ├── secrets.py        # Camera passwords via keyring (Credential Manager)
-│       │   └── paths.py          # %APPDATA%\CamDesk, Videos\CamDesk, logs (CAMDESK_HOME override)
+│       │   ├── settings.py       # ✅ Load/save user settings (JSON, versioned, atomic write)
+│       │   ├── secrets.py        # ✅ Camera passwords via keyring (Credential Manager)
+│       │   └── paths.py          # ✅         # %APPDATA%\CamDesk, Videos\CamDesk, logs (CAMDESK_HOME override)
 │       │
-│       ├── dev/                  # Run and test without the phone (`--fake`)
-│       │   ├── fake_camera.py        # Fake IP Webcam HTTP API (status.json, torch, settings…)
-│       │   └── fake_video_source.py  # Plays a local video file as if it were the RTSP stream
+│       ├── dev/                  # ✅ Run and test without the phone (`--fake`)
+│       │   ├── fake_camera.py        # ✅ Fake IP Webcam HTTP API, mirrors the real phone's quirks
+│       │   └── fake_video_source.py  # ✅ Moving test pattern; can simulate failed opens / drops
 │       │
 │       ├── ui/
 │       │   ├── main_window.py    # Frameless window, layout, shortcuts
 │       │   ├── title_bar.py      # Custom title bar + camera selector pill
 │       │   ├── connect_view.py   # First-launch / connect screen
 │       │   ├── status_bar.py
-│       │   ├── strings.py        # All user-facing text (English)
-│       │   ├── preview_window.py # TEMPORARY (step 4): bare live-video window until MainWindow (step 6)
+│       │   ├── strings.py        # ✅ All user-facing text (English)
+│       │   ├── preview_window.py # ✅ TEMPORARY (step 4): bare live-video window until MainWindow (step 6)
 │       │   ├── video/
-│       │   │   ├── video_widget.py   # QOpenGLWidget, texture upload, view modes
-│       │   │   ├── shaders.py        # NV12 + RGB shaders
-│       │   │   └── overlays.py       # REC badge, FPS/latency, focus ring, flash, debug overlay (Ctrl+D)
+│       │   │   ├── video_widget.py   # ✅ QOpenGLWidget, texture upload, view modes, repaint watchdog
+│       │   │   ├── shaders.py        # ✅ YUV → RGB shaders (NV12 / YUV420P, BT.601/709)
+│       │   │   └── overlays.py       # ✅ Debug overlay (Ctrl+D); later: REC badge, focus ring, flash
 │       │   ├── panels/
 │       │   │   ├── control_dock.py   # Floating auto-hide dock
 │       │   │   └── side_panel.py     # Camera / Image / Advanced cards
@@ -225,36 +237,39 @@ camara/
 │       │   │   ├── card.py
 │       │   │   └── toast.py
 │       │   └── theme/
-│       │       ├── tokens.py         # Colors, spacing, radius, fonts (from ui-design.md)
+│       │       ├── tokens.py         # ✅ Colors, spacing, radius, fonts (from ui-design.md)
 │       │       ├── stylesheet.py     # Builds QSS from tokens
 │       │       └── icons.py          # Loads + recolors Lucide SVGs
 │       │
 │       ├── resources/
-│       │   ├── icons/            # Lucide SVG files
+│       │   ├── icons/            # Lucide SVG files (folder exists, empty)
 │       │   └── app.ico
 │       │
 │       └── utils/
-│           ├── logging.py        # Rotating file log in %APPDATA%\CamDesk\logs
-│           └── timing.py         # FPS / latency counters
+│           ├── logging.py        # ✅ Rotating file log in %APPDATA%\CamDesk\logs (credentials redacted)
+│           └── timing.py         # ✅ RateCounter (FPS / bitrate) + CpuMeter
 │
 ├── tests/
-│   ├── conftest.py               # Temp CAMDESK_HOME per test + fake_camera fixture
-│   ├── test_fake_camera.py
-│   ├── test_logging.py
-│   ├── test_endpoints.py
-│   ├── test_capabilities.py
-│   ├── test_recorder.py          # Segmenting at 30 min, MKV playable
-│   ├── test_frame_buffer.py
-│   ├── test_stream_service.py    # Reconnect, backoff, FAILED/retry, fallback, coalescing
-│   ├── test_rtsp_source.py       # PyAV source on a generated MKV file
-│   ├── test_timing.py
-│   ├── test_settings.py
-│   ├── test_storage.py
-│   └── test_controller.py        # With fake camera + fake video source
+│   ├── conftest.py               # ✅ Temp CAMDESK_HOME per test, shared QApplication, fake_camera
+│   ├── qt_helpers.py             # ✅ SignalRecorder (QSignalSpy.wait() holds the GIL)
+│   ├── test_fake_camera.py       # ✅
+│   ├── test_logging.py           # ✅
+│   ├── test_settings.py          # ✅
+│   ├── test_endpoints.py         # ✅
+│   ├── test_capabilities.py      # ✅ Includes trimmed real replies from the phone
+│   ├── test_camera_client.py     # ✅ Sync API + threaded client against the fake camera
+│   ├── test_frame_buffer.py      # ✅
+│   ├── test_timing.py            # ✅
+│   ├── test_stream_service.py    # ✅ Reconnect, backoff, FAILED/retry, fallback, coalescing
+│   ├── test_rtsp_source.py       # ✅ PyAV source on a generated MKV file
+│   ├── test_video_widget.py      # ✅ Renders real frames, reads back pixel colors
+│   ├── test_controller.py        # With fake camera + fake video source — step 5
+│   ├── test_recorder.py          # Segmenting at 30 min, MKV playable — step 8
+│   └── test_storage.py           # step 8
 │
 └── scripts/
-    ├── run.ps1                   # Run in dev mode
-    └── build.ps1                 # Nuitka → dist\CamDesk.exe
+    ├── run.ps1                   # ✅ Run in dev mode (passes args through)
+    └── build.ps1                 # Nuitka → dist\CamDesk.exe — step 10
 ```
 
 ---
@@ -280,8 +295,9 @@ camara/
 | `httpx` | Camera control HTTP requests |
 | `numpy` | Frame arrays |
 | `keyring` | Secure password storage |
-| `opencv-python-headless` | Motion detection (V2) |
-| Dev: `pytest`, `ruff`, `nuitka` | Tests, lint, build |
+| `opencv-python-headless` | Motion detection (V2) — not added yet |
+| Dev: `pytest`, `ruff` | Tests, lint |
+| Dev: `nuitka` | Build the .exe — added in step 10 |
 
 Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed so every build uses the same versions.
 
@@ -312,10 +328,10 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 
 ## 10. Build Order (Version 1)
 
-1. Project setup — `git init`, `uv init`, dependencies, folder skeleton, logging, settings, fake camera
-2. `camera/` — endpoints + client (test against your phone)
-3. `stream/` — RTSP source + hardware decode + frame buffer + service
-4. `ui/video` — OpenGL video widget with NV12 shader → **first live video** + debug overlay; check 30 FPS / ~200 ms / < 10% CPU
+1. ✅ Project setup — `git init`, `uv init`, dependencies, folder skeleton, logging, settings, fake camera
+2. ✅ `camera/` — endpoints + client, verified against the phone
+3. ✅ `stream/` — RTSP source + hardware decode + frame buffer + service
+4. ✅ `ui/video` — OpenGL video widget + debug overlay → **first live video**; 30 FPS ✅ · < 10% CPU ✅ · ~240 ms latency ⚠️
 5. `core/` — AppState + AppController wiring
 6. UI shell — theme, main window, title bar, connect screen, status bar
 7. Control dock + side panel → camera controls working
