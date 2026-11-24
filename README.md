@@ -24,9 +24,9 @@ A smooth, modern Windows desktop app to view, record and control an Android phon
 <p align="center">
   <img src="docs/assets/connect-screen.png" alt="CamDesk connect screen: IP address, port, login and recent cameras" width="800">
   <br><br>
-  <img src="docs/assets/main-window.png" alt="CamDesk main window streaming the test pattern with the Ctrl+D debug overlay: 30 FPS, 0 dropped frames" width="800">
+  <img src="docs/assets/main-window.jpg" alt="Illustration of the CamDesk main window showing a live phone-camera feed of a desk with a plant and a coffee mug, with the camera and image controls in the side panel" width="800">
   <br>
-  <sub>Connect screen, and the main window streaming the built-in test pattern (<code>--fake</code>) with the <code>Ctrl+D</code> debug overlay.</sub>
+  <sub>Connect screen (screenshot), and an <b>illustration</b> of the main window with a live camera feed (the video area is AI-generated; the interface is CamDesk's real one).</sub>
 </p>
 
 ## Highlights
