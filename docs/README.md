@@ -21,8 +21,8 @@ Rules for AI coding agents are in [../AGENTS.md](../AGENTS.md) at the project ro
 | 4. Live OpenGL preview + debug overlay | ✅ 30 FPS, ~2% CPU |
 | 5. AppState + AppController | ✅ optimistic, capability-aware, throttled zoom |
 | 6. UI shell (main window, connect screen) | ✅ custom title bar, connect screen, status bar |
-| 7. Controls (dock + side panel) | next |
-| 8. Snapshots + MKV recording | |
+| 7. Controls (dock + side panel) | ✅ verified 19/19 on the phone |
+| 8. Snapshots + MKV recording | next |
 | 9. Polish (toasts, reconnect UI, shortcuts) | |
 | 10. `CamDesk.exe` build | |
 

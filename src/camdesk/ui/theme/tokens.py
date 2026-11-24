@@ -9,6 +9,9 @@ BG_ELEVATED = "#1E2128"
 BG_HOVER = "#262A33"
 BG_OVERLAY = "rgba(14, 15, 18, 0.72)"
 BORDER = "#2A2E37"
+TOGGLE_OFF = "#3A3F4A"
+SLIDER_TRACK = "#2E323C"
+DOCK_HOVER = "rgba(255, 255, 255, 0.08)"
 VIDEO_LETTERBOX = "#000000"
 
 # -- text --------------------------------------------------------------------
@@ -55,6 +58,12 @@ RESIZE_BORDER = 6  # invisible resize margin of the frameless window
 WINDOW_MIN_WIDTH = 960
 WINDOW_MIN_HEIGHT = 600
 DIM_OVERLAY = "rgba(0, 0, 0, 0.55)"  # darkens the last frame while reconnecting
+SIDE_PANEL_WIDTH = 260
+SIDE_PANEL_AUTO_HIDE_BELOW = 1100  # window width
+DOCK_BUTTON = 44
+DOCK_AUTO_HIDE_MS = 3000
+FOCUS_RING = 56
+FOCUS_RING_MS = 600
 
 # -- motion (ms) -------------------------------------------------------------
 ANIM_FAST = 120

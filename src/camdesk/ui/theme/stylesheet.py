@@ -165,6 +165,61 @@ QPushButton[variant="pill"] {{
 }}
 QPushButton[variant="pill"]:hover {{ background: {t.BG_HOVER}; }}
 
+/* camera controls */
+QPushButton[variant="dock"] {{
+    min-width: {t.DOCK_BUTTON}px; max-width: {t.DOCK_BUTTON}px;
+    min-height: {t.DOCK_BUTTON}px; max-height: {t.DOCK_BUTTON}px;
+    padding: 0;
+    border-radius: {t.DOCK_BUTTON // 2}px;
+}}
+QPushButton[variant="dock"]:hover {{ background: {t.DOCK_HOVER}; }}
+QPushButton[variant="dock"]:checked {{ background: {t.ACCENT}; }}
+QPushButton[variant="segment"] {{
+    background: {t.BG_BASE};
+    border-radius: 0;
+    min-height: {t.CONTROL_HEIGHT - 8}px;
+    padding: 0 {t.SPACE_3}px;
+    color: {t.TEXT_SECONDARY};
+}}
+QPushButton[variant="segment"]:hover {{ color: {t.TEXT_PRIMARY}; }}
+QPushButton[variant="segment"]:checked {{ background: {t.BG_HOVER}; color: {t.TEXT_PRIMARY}; }}
+QFrame#Dock {{
+    background: {t.BG_OVERLAY};
+    border-radius: {t.DOCK_BUTTON // 2 + t.SPACE_1}px;
+}}
+QScrollArea#SidePanel, QWidget#SidePanelBody {{
+    background: {t.BG_SURFACE};
+    border: none;
+}}
+QScrollArea#SidePanel {{ border-left: 1px solid {t.BORDER}; }}
+QSlider::groove:horizontal {{
+    height: 4px; background: {t.SLIDER_TRACK}; border-radius: 2px;
+}}
+QSlider::sub-page:horizontal {{ background: {t.ACCENT}; border-radius: 2px; }}
+QSlider::handle:horizontal {{
+    width: 14px; height: 14px; margin: -5px 0;
+    border-radius: 7px; background: {t.TEXT_PRIMARY};
+}}
+QSlider::handle:horizontal:hover {{ background: {t.TEXT_ON_ACCENT}; }}
+QSlider::sub-page:horizontal:disabled {{ background: {t.TOGGLE_OFF}; }}
+QSlider::handle:horizontal:disabled {{ background: {t.TEXT_DISABLED}; }}
+QComboBox {{
+    background: {t.BG_ELEVATED};
+    border: 1px solid {t.BORDER};
+    border-radius: {t.RADIUS_SM}px;
+    padding: 0 {t.SPACE_3}px;
+    min-height: {t.CONTROL_HEIGHT - 6}px;
+}}
+QComboBox:hover {{ border-color: {t.BG_HOVER}; }}
+QComboBox::drop-down {{ border: none; width: {t.SPACE_6}px; }}
+QComboBox QAbstractItemView {{
+    background: {t.BG_ELEVATED};
+    border: 1px solid {t.BORDER};
+    selection-background-color: {t.BG_HOVER};
+    outline: none;
+}}
+QLabel:disabled {{ color: {t.TEXT_DISABLED}; }}
+
 /* -- menus ---------------------------------------------------------------------- */
 QMenu {{
     background: {t.BG_ELEVATED};

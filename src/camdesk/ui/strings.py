@@ -42,6 +42,43 @@ CONNECT_HINT = "On the phone: open IP Webcam and tap Start server. Use the addre
 RETRY = "Retry"
 CHANGE_CAMERA = "Change camera"
 
+# Control dock (tooltips show the shortcut)
+TIP_SNAPSHOT = "Snapshot · Space"
+TIP_RECORD = "Record · R"
+TIP_SWITCH_CAMERA = "Switch camera · C"
+TIP_FOCUS = "Focus · A (or click the picture)"
+TIP_FULLSCREEN = "Fullscreen · F"
+TIP_COMING_SOON = "Coming soon"
+
+# Side panel
+PANEL_CAMERA = "Camera"
+PANEL_IMAGE = "Image"
+PANEL_VIEW = "View"
+FLASHLIGHT = "Flashlight"
+NIGHT_VISION = "Night vision"
+ZOOM = "Zoom"
+ZOOM_VALUE = "{ratio:.1f}×"
+QUALITY = "Quality"
+QUALITY_VALUE = "{value}%"
+RESOLUTION = "Resolution"
+ROTATE = "Rotate"
+TIP_ROTATE_LEFT = "Rotate left"
+TIP_ROTATE_RIGHT = "Rotate right"
+MIRROR = "Mirror"
+FLIP = "Flip vertically"
+VIEW_FIT = "Fit"
+VIEW_FILL = "Fill"
+VIEW_ORIGINAL = "1:1"
+TIP_VIEW = "View mode · V"
+TIP_PANEL = "Show / hide controls · Tab"
+NOT_ON_THIS_CAMERA = "Not available on this camera"
+ORIENTATION_NAMES = {
+    "landscape": "Landscape",
+    "portrait": "Portrait",
+    "upsidedown": "Upside down",
+    "upsidedown_portrait": "Portrait (flipped)",
+}
+
 # Status bar
 STATUS_BATTERY = "Battery {percent:.0f}%"
 STATUS_BATTERY_CHARGING = "Battery {percent:.0f}% · charging"

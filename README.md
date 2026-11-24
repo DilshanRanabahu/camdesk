@@ -17,8 +17,8 @@
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
-> **Status: in development.** Version 1, build steps **1–6 of 10** done: the dark UI with its connect screen, live
-> GPU-decoded video and keyboard camera controls work. On-screen controls and recording are next. See [progress](docs/README.md#project-status).
+> **Status: in development.** Version 1, build steps **1–7 of 10** done: dark UI, live GPU-decoded video, and every
+> camera control (flashlight, zoom, rotate, mirror, tap-to-focus, quality, resolution). Snapshots and recording are next. See [progress](docs/README.md#project-status).
 
 <p align="center">
   <img src="docs/assets/connect-screen.png" alt="CamDesk connect screen: IP address, port, login and recent cameras" width="800">
@@ -63,18 +63,20 @@ If the custom title bar ever misbehaves, `--native-frame` uses the standard Wind
 | `Ctrl+D` | Debug overlay: FPS, CPU, decoder, bitrate, frame age |
 | `F11` / `F` / double-click | Fullscreen (`Esc` exits) |
 | `V` | View mode: fit / fill / original size |
-| `T` / `C` / `N` / `A` | Flashlight / switch camera / night vision / autofocus (temporary keys) |
+| `Tab` | Show / hide the side panel |
+| `T` / `C` / `N` / `A` | Flashlight / switch camera / night vision / focus |
+| Click the picture | Focus on that spot |
 | `+` / `-` | Zoom in / out |
 | `Ctrl+R` | Retry the connection |
 
-**Picture sideways?** If the phone stands upright, set IP Webcam's video orientation to *portrait*. A rotate control is coming in step 7.
+**Picture sideways or upside down?** Use **Rotate** in the side panel. It rotates on the phone, so recordings come out right too.
 
 Recommended phone settings (resolution, Samsung battery settings, static IP): [docs/decisions.md § 4](docs/decisions.md#4-recommended-phone-setup-ip-webcam).
 
 ## Development
 
 ```powershell
-uv run pytest            # 154 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
+uv run pytest            # 188 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
 uv run ruff check .      # lint
 uv run ruff format .     # format
 ```

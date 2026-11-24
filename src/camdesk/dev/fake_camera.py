@@ -52,6 +52,8 @@ class FakeCamera:
             "zoom": "100",
             "focusmode": "continuous-video",
             "orientation": "landscape",
+            "mirror_flip": "none",
+            "focus_region": "-1001x-1001",
         }
         self._server = ThreadingHTTPServer((host, port), self._make_handler())
         self._server.daemon_threads = True
@@ -109,6 +111,7 @@ class FakeCamera:
                 "orientation": ["landscape", "portrait", "upsidedown", "upsidedown_portrait"],
                 "ffc": ["on", "off"],
                 "night_vision": ["on", "off"],
+                "mirror_flip": ["none", "mirror", "flip", "mirror,flip"],
             }
             if not self.switching:
                 avail |= {
@@ -149,7 +152,12 @@ class FakeCamera:
                 key = path.removeprefix("/settings/")
                 if key not in self.state or "set" not in query:
                     return False
-                self.state[key] = query["set"][0]
+                value = query["set"][0]
+                if key == "focus_region":  # like the phone: set "X,Y", reported as "XxY"
+                    if "," not in value:
+                        return True  # the phone answers Ok but ignores other formats
+                    value = value.replace(",", "x")
+                self.state[key] = value
                 if key == "ffc":
                     self.state["torch"] = "off"
                     self.state["zoom"] = "100"

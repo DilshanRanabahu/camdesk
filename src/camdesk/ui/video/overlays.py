@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont
+from PySide6.QtCore import (
+    Property,
+    QEasingCurve,
+    QPoint,
+    QPropertyAnimation,
+    QRectF,
+    Qt,
+    QTimer,
+)
+from PySide6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import QLabel, QWidget
 
 from camdesk.core.frames import LatestFrameBuffer
@@ -97,3 +105,48 @@ class DebugOverlay(QLabel):
         self.adjustSize()
         margin = tokens.SPACE_3
         self.move(video.width() - self.width() - margin, margin)
+
+
+class FocusRing(QWidget):
+    """Tap-to-focus feedback: a ring that shrinks and fades where the picture was clicked."""
+
+    def __init__(self, video: QWidget) -> None:
+        super().__init__(video)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(tokens.FOCUS_RING, tokens.FOCUS_RING)
+        self._t = 0.0
+        self._anim = QPropertyAnimation(self, b"progress", self)
+        self._anim.setDuration(tokens.FOCUS_RING_MS)
+        self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._anim.finished.connect(self.hide)
+        self.hide()
+
+    def show_at(self, pos: QPoint) -> None:
+        self.move(pos.x() - self.width() // 2, pos.y() - self.height() // 2)
+        self._anim.stop()
+        self._anim.setStartValue(0.0)
+        self._anim.setEndValue(1.0)
+        self.show()
+        self.raise_()
+        self._anim.start()
+
+    def _get(self) -> float:
+        return self._t
+
+    def _set(self, value: float) -> None:
+        self._t = value
+        self.update()
+
+    progress = Property(float, _get, _set)
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        color = QColor(tokens.ACCENT)
+        color.setAlphaF(1.0 - 0.8 * self._t)
+        pen = QPen(color, 2)
+        p.setPen(pen)
+        inset = 2 + self._t * self.width() * 0.2  # shrinks as it settles
+        p.drawEllipse(QRectF(inset, inset, self.width() - 2 * inset, self.height() - 2 * inset))
+        p.end()

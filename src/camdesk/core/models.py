@@ -54,6 +54,8 @@ class CameraCapabilities:
     exposure_max: int = 0
     video_sizes: tuple[str, ...] = ()
     orientations: tuple[str, ...] = ()
+    flip_modes: tuple[str, ...] = ()  # e.g. none, mirror, flip, mirror,flip
+    has_focus_region: bool = False  # tap-to-focus on a point (not just "focus now")
 
     @property
     def has_zoom(self) -> bool:
@@ -88,6 +90,15 @@ class CameraStatus:
     focus_mode: str = ""
     video_size: str = ""
     orientation: str = "landscape"
+    mirror_flip: str = "none"
+
+    @property
+    def mirrored(self) -> bool:
+        return "mirror" in self.mirror_flip
+
+    @property
+    def flipped(self) -> bool:
+        return "flip" in self.mirror_flip
 
 
 @dataclass(frozen=True, slots=True)

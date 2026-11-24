@@ -4,7 +4,7 @@ A Windows desktop app to view, record and control an Android phone running the *
 
 Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [architecture.md](architecture.md)
 
-> **Progress (2026-11-24):** Version 1 build steps **1–6 of 10** done — dark UI with custom title bar, connect screen and status bar; live GPU video; every camera control works through AppController (temporary keys until the buttons in step 7). Next: step 7. `[x]` = done.
+> **Progress (2026-11-24):** Version 1 build steps **1–7 of 10** done — dark UI, live GPU video, control dock and side panel with every camera control (verified on the phone). Next: step 8, snapshots + MKV recording. `[x]` = done.
 
 ## Tech Stack
 
@@ -37,7 +37,7 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 ### Live View
 - [x] 5. Smooth live video with GPU decoding (RTSP H.264, MJPEG fallback)
 - [x] 6. Fullscreen mode (double-click or F11)
-- [x] 7. View modes: fit / fill / original size (`V` key for now; UI control in step 7)
+- [x] 7. View modes: fit / fill / original size (`V` key + View card in the side panel)
 - [ ] 8. On-screen FPS, resolution and latency (small always-on badge; full numbers already in 8a)
 - [x] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use
 
@@ -48,13 +48,13 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 - [ ] 11. "Open captures folder" button
 
 ### Camera Controls (sent to the phone)
-- [ ] 12. Flashlight on/off — **back camera only** (front has no flash; button disabled)
-- [ ] 13. Switch front/back camera
-- [ ] 14. Zoom slider, **1× – 10×** (digital zoom)
-- [ ] 15. Tap-to-focus — **back camera only** (front is fixed focus; disabled)
-- [ ] 16. Resolution and quality settings
-- [ ] 17. Night vision on/off
-- [ ] 18. Rotate / flip image (needed: an upright phone shows the picture sideways)
+- [x] 12. Flashlight on/off — **back camera only** (front has no flash; button disabled)
+- [x] 13. Switch front/back camera
+- [x] 14. Zoom slider, **1× – 10×** (digital zoom)
+- [x] 15. Tap-to-focus — **back camera only** (front is fixed focus; disabled). Click the picture; focus ring shows where
+- [x] 16. Resolution and quality settings (stream recovers by itself after a change)
+- [x] 17. Night vision on/off
+- [x] 18. Rotate / flip image — done on the phone, so recordings are rotated too
 
 ### Status Bar
 - [ ] 19. Phone battery level — only when the phone reports it (IP Webcam 1.19 on the A06 sends no sensor data)
@@ -102,6 +102,8 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 | `T` | Flashlight |
 | `C` | Switch camera |
 | `+` / `-` | Zoom in / out |
+| `Tab` | Show / hide side panel |
+| Click picture | Focus on that spot |
 | `A` | Autofocus (temporary key until step 7) |
 | `N` | Night vision (temporary key until step 7) |
 | `Ctrl` + `D` | Debug overlay |

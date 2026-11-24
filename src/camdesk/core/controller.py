@@ -28,7 +28,7 @@ from camdesk.camera.endpoints import Command
 from camdesk.config import secrets as keyring_secrets
 from camdesk.config import settings as settings_store
 from camdesk.config.settings import Settings
-from camdesk.core import messages
+from camdesk.core import geometry, messages
 from camdesk.core.models import (
     CameraCapabilities,
     CameraFacing,
@@ -76,6 +76,7 @@ class AppController(QObject):
         self._secrets = secrets
         self._save_settings = save_settings
         self._stream: Any = None
+        self._in_flight = 0  # commands sent, not yet answered
         self._auth_warned = False
 
         self._zoom_pending: int | None = None
@@ -87,6 +88,7 @@ class AppController(QObject):
         client.status_received.connect(self._on_status)
         client.device_info_received.connect(state.set_device_info)
         client.command_failed.connect(self._on_command_failed)
+        client.command_succeeded.connect(self._on_command_done)
         client.auth_failed.connect(self._on_auth_failed)
 
     # -- connection --------------------------------------------------------
@@ -130,6 +132,7 @@ class AppController(QObject):
         self._client.disconnect_camera()
         self._zoom_timer.stop()
         self._zoom_pending = None
+        self._in_flight = 0
         self.state.reset_camera_data()
         self.state.set_connection(ConnectionState.IDLE)
 
@@ -250,6 +253,38 @@ class AppController(QObject):
     def set_orientation(self, orientation: str) -> None:
         self._send(ep.orientation(orientation), replace(self.status, orientation=orientation))
 
+    def rotate(self, steps: int = 1) -> None:
+        """Quarter turns: +1 clockwise, -1 counter-clockwise. Done on the phone, so recordings
+        come out rotated too (verified: portrait changes the stream to 1080×1920)."""
+        current = self.status.orientation
+        self.set_orientation(
+            geometry.rotate_orientation(current, steps, self.capabilities.orientations)
+        )
+
+    def set_mirror_flip(self, value: str) -> None:
+        modes = self.capabilities.flip_modes
+        if modes and value not in modes:
+            self._not_available("Mirror / flip")
+            return
+        self._send(ep.mirror_flip(value), replace(self.status, mirror_flip=value))
+
+    def toggle_mirror(self) -> None:
+        self.set_mirror_flip(geometry.toggle_flip_mode(self.status.mirror_flip, "mirror"))
+
+    def toggle_flip(self) -> None:
+        self.set_mirror_flip(geometry.toggle_flip_mode(self.status.mirror_flip, "flip"))
+
+    def focus_at(self, nx: float, ny: float) -> None:
+        """Tap-to-focus at a point of the shown picture (0–1, origin top-left)."""
+        if not self.capabilities.has_autofocus:
+            self._not_available("Focus")
+            return
+        if self.capabilities.has_focus_region:
+            s = self.status
+            x, y = geometry.focus_point(nx, ny, s.orientation, s.mirror_flip)
+            self._send(ep.focus_region(x, y))
+        self._send(ep.focus(True))
+
     # -- internals ---------------------------------------------------------
 
     def _send(self, command: Command, optimistic: CameraStatus | None = None) -> None:
@@ -257,12 +292,14 @@ class AppController(QObject):
             return
         if optimistic is not None:
             self.state.set_camera_status(optimistic)
+        self._in_flight += 1
         self._client.send(command)
 
     def _flush_zoom(self) -> None:
         if self._zoom_pending is None:
             return
         percent, self._zoom_pending = self._zoom_pending, None
+        self._in_flight += 1
         self._client.send(ep.zoom(percent))
         self._zoom_timer.start()
 
@@ -272,12 +309,22 @@ class AppController(QObject):
     def _on_status(self, status: CameraStatus, capabilities: CameraCapabilities | None) -> None:
         if self.camera is None:
             return  # late reply after disconnect
+        if self._in_flight > 0:
+            # A report taken before our command ran would undo the optimistic change, and the
+            # next click would build on that stale value (found on the phone: fast Mirror +
+            # Upside-down clicks left mirror on). The client refreshes after each command,
+            # so a fresh report follows once the last one is done.
+            return
         if self._zoom_pending is not None or self._zoom_timer.isActive():
             status = replace(status, zoom_ratio=self.status.zoom_ratio)  # don't fight the slider
         self.state.set_camera_status(status)
         self.state.set_capabilities(capabilities)
 
+    def _on_command_done(self, command: Command) -> None:
+        self._in_flight = max(0, self._in_flight - 1)
+
     def _on_command_failed(self, command: Command, reason: str) -> None:
+        self._in_flight = max(0, self._in_flight - 1)
         label = command.label or command.path
         self.state.notify(
             Toast(messages.COMMAND_FAILED.format(label=label, reason=reason), ToastLevel.ERROR)

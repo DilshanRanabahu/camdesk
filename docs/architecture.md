@@ -4,7 +4,7 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
-> **Status:** build steps 1–6 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
+> **Status:** build steps 1–7 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
 
 ---
 
@@ -134,6 +134,9 @@ Setters emit **only when the value changes**. `set_capabilities(None)` keeps the
 - **Never blocks:** `disconnect()` stops the stream without waiting (`stop(timeout_s=0)`); settings are saved on a worker thread.
 - Stream signals connect to controller **methods** (not lambdas) so they're queued to the UI thread; late signals from an old stream are ignored via `sender()`.
 
+### In-flight commands
+While a command is on its way, status reports are ignored: one taken before the command ran would undo the optimistic value. The client refreshes after each command, so a fresh report always follows.
+
 ### Example flow — user turns on the flashlight
 ```
 ControlDock click ─▶ AppController.set_torch(True)
@@ -198,6 +201,7 @@ camara/
 │       │   ├── controller.py     # ✅ AppController — every user action, optimistic + throttled
 │       │   ├── messages.py       # ✅ User-facing text produced by core (toasts, validation)
 │       │   ├── validation.py     # ✅ Parse the connect form (accepts http://ip:port as IP Webcam shows it)
+│       │   ├── geometry.py       # ✅ Rotate order, mirror/flip toggling, click → focus_region (-1000…1000)
 │       │   └── errors.py         # ✅ App-specific exceptions
 │       │
 │       ├── camera/               # Talking to the IP Webcam HTTP API
@@ -243,16 +247,15 @@ camara/
 │       │   │   ├── video_widget.py   # ✅ QOpenGLWidget, texture upload, view modes, repaint watchdog
 │       │   │   ├── shaders.py        # ✅ YUV → RGB shaders (NV12 / YUV420P, BT.601/709)
 │       │   │   ├── connection_overlay.py # ✅ Connecting / Reconnecting (dimmed) / Failed + Retry, Change camera
-│       │   │   └── overlays.py       # ✅ Debug overlay (Ctrl+D); later: REC badge, focus ring, flash
+│       │   │   └── overlays.py       # ✅ Debug overlay (Ctrl+D), focus ring; later: REC badge, flash
 │       │   ├── panels/
-│       │   │   ├── control_dock.py   # Floating auto-hide dock
-│       │   │   └── side_panel.py     # Camera / Image / Advanced cards
+│       │   │   ├── control_dock.py   # ✅ Floating dock, fades after 3 s idle, capability-aware
+│       │   │   └── side_panel.py     # ✅ Camera / Image / View cards; Tab or ◧ toggles; auto-hides < 1100 px
 │       │   ├── widgets/              # Reusable components from ui-design.md
-│       │   │   ├── toggle.py
-│       │   │   ├── slider.py
-│       │   │   ├── icon_button.py
-│       │   │   ├── card.py
-│       │   │   └── toast.py
+│       │   │   ├── toggle.py         # ✅ Animated switch, set_checked_silently()
+│       │   │   ├── slider.py         # ✅ Labeled slider: live value_changed + value_committed on release
+│       │   │   ├── card.py           # ✅ Card + labeled row
+│       │   │   └── toast.py          # step 9
 │       │   └── theme/
 │       │       ├── tokens.py         # ✅ Colors, spacing, radius, fonts (from ui-design.md)
 │       │       ├── stylesheet.py     # ✅ Builds QSS + dark palette from tokens
@@ -286,6 +289,8 @@ camara/
 │   ├── test_main_window.py       # ✅ Pages, pill, overlay, recent/forget, geometry (fake phone)
 │   ├── test_validation.py        # ✅ Connect-form address parsing
 │   ├── test_win_frame.py         # ✅ Resize/caption hit-testing
+│   ├── test_geometry.py          # ✅ Rotate order, flip toggling, focus point mapping
+│   ├── test_controls.py          # ✅ Controller actions, widgets, side panel, dock, stale-report race
 │   ├── test_state.py             # ✅ Emit-on-change, keep capabilities while switching
 │   ├── test_controller.py        # ✅ End-to-end: real client + stream, fake phone + fake video
 │   ├── test_recorder.py          # Segmenting at 30 min, MKV playable — step 8
@@ -359,7 +364,7 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 4. ✅ `ui/video` — OpenGL video widget + debug overlay → **first live video**; 30 FPS ✅ · < 10% CPU ✅ · ~240 ms latency ⚠️
 5. ✅ `core/` — AppState + AppController wiring (temporary keys drive the phone)
 6. ✅ UI shell — theme, main window, custom title bar, connect screen, connection overlay, status bar
-7. Control dock + side panel → camera controls working
+7. ✅ Control dock + side panel → camera controls working (verified 19/19 on the phone)
 8. `capture/` — snapshot + MKV recording with 30-min segments
 9. Reconnect, toasts, settings persistence, shortcuts
 10. Nuitka build → `CamDesk.exe`

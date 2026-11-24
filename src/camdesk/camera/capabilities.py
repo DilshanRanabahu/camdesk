@@ -62,6 +62,7 @@ def parse_status(data: dict[str, Any]) -> CameraStatus:
         focus_mode=str(cur.get("focusmode", "")),
         video_size=str(cur.get(ep.KEY_VIDEO_SIZE, "")),
         orientation=str(cur.get(ep.KEY_ORIENTATION, "landscape")),
+        mirror_flip=str(cur.get(ep.KEY_MIRROR_FLIP, "none")),
     )
 
 
@@ -87,6 +88,8 @@ def parse_capabilities(data: dict[str, Any]) -> CameraCapabilities | None:
         exposure_max=max(exposure) if exposure else 0,
         video_sizes=_str_list(avail.get(ep.KEY_VIDEO_SIZE)),
         orientations=_str_list(avail.get(ep.KEY_ORIENTATION)),
+        flip_modes=_str_list(avail.get(ep.KEY_MIRROR_FLIP)),
+        has_focus_region=ep.KEY_FOCUS_REGION in cur,
     )
 
 

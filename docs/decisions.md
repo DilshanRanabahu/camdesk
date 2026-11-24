@@ -2,9 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 6)
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 7)
 
-Decisions 18–35 were made during development; each row says why.
+Decisions 18–39 were made during development; each row says why.
 
 ---
 
@@ -48,6 +48,10 @@ Decisions 18–35 were made during development; each row says why.
 | 33 | "No picture" watchdog | Reconnect if no frame within 10 s of connecting, or none for 5 s after | Seen on the phone right after IP Webcam starts: packets arrive but nothing decodes, which the read timeout can't catch |
 | 34 | "Can't reach" message | FFmpeg's `Immediate exit requested` (our open timeout firing) maps to "Can't reach the phone" | Found on the phone test: an unreachable IP showed the vague "The video stream failed" |
 | 35 | Maximized detection in the frame code | Ask Windows (`IsZoomed`), not Qt | Fullscreen → maximized: Qt still reported fullscreen, so ~7 px were cut off at every edge |
+| 36 | Rotate / mirror on the phone | `orientation` and `mirror_flip` settings, not a shader | Verified: the phone re-encodes (portrait → 1080×1920), so **recordings come out rotated too**, at no PC cost |
+| 37 | Tap-to-focus | Click → `focus_region` "X,Y" (-1000…1000, mapped through orientation/mirror) then `/focus`; single click waits out the double-click interval | Verified: `focus_region` only accepts a comma; double-click stays fullscreen |
+| 38 | Quality slider | Sent on release, not while dragging | Each change restarts the phone's encoder |
+| 39 | Stale status vs optimistic UI | Ignore status reports while commands are in flight | Found on the phone: fast Mirror + Flip clicks left mirror on |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -233,6 +237,18 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
 - In a dim room the camera delivered ~11–20 FPS instead of 30 (longer exposure). Normal camera behavior.
 - Main window with GPU decoding: first frame on screen, NV12 textures, 29.9 FPS drawn, 0 dropped (fake 1280×720 stream).
 - **Driven like a user against the phone (24/24 passed):** paste `http://192.168.8.105:8080` → connected in 1.1 s; 30.0 FPS drawn, D3D11VA, **2.8% CPU**, 1.9 ms decode→screen; T/+/− keys confirmed by the phone; F11/Esc; maximize fits the work area; unreachable IP → "Can't reach the phone" overlay; Change camera → recent list → reconnected. Phone settings restored.
+
+### Controls on the real phone (build step 7)
+19/19 passed, phone restored afterwards:
+
+| Check | Result |
+|---|---|
+| Rotate right / left (side panel) | ✅ landscape → portrait (stream becomes **1080×1920**) → upside down → back; video keeps flowing |
+| Upside-down orientation | ✅ the user's upside-down-mounted phone shows the scene upright |
+| Mirror + flip toggles, clicked fast | ✅ `mirror` → `mirror,flip` → `none` (after decision #39) |
+| Click on the picture | ✅ focus ring + `focus_region` 500x0 for a click on the right half |
+| Quality slider drag → release | ✅ one command (70), video recovers |
+| Resolution 1920×1080 → 1280×720 → back | ✅ stream recovers by itself in **2.6 s** |
 
 ### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).

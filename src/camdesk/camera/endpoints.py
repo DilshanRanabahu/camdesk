@@ -24,6 +24,8 @@ KEY_QUALITY = "quality"
 KEY_VIDEO_SIZE = "video_size"
 KEY_ORIENTATION = "orientation"
 KEY_EXPOSURE = "exposure"
+KEY_MIRROR_FLIP = "mirror_flip"  # none | mirror | flip | mirror,flip
+KEY_FOCUS_REGION = "focus_region"  # set as "X,Y" in -1000…1000 (verified on the phone)
 
 # -- status.json field names --------------------------------------------
 
@@ -84,6 +86,17 @@ def orientation(value: str) -> Command:
 
 def exposure(value: int) -> Command:
     return setting(KEY_EXPOSURE, str(int(value)), "Exposure")
+
+
+def mirror_flip(value: str) -> Command:
+    return setting(KEY_MIRROR_FLIP, value, "Mirror / flip")
+
+
+def focus_region(x: int, y: int) -> Command:
+    """Point to focus on, in the camera's -1000…1000 coordinates. Note the comma: "XxY" is
+    what status.json reports, but only "X,Y" is accepted when setting it."""
+    x, y = (max(-1000, min(1000, int(v))) for v in (x, y))
+    return setting(KEY_FOCUS_REGION, f"{x},{y}", "Focus")
 
 
 # -- full URLs -----------------------------------------------------------

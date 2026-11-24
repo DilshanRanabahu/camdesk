@@ -12,11 +12,11 @@ import time
 from enum import Enum
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QMatrix3x3
+from PySide6.QtCore import QPoint, QPointF, Qt, QTimer, Signal, Slot
+from PySide6.QtGui import QMatrix3x3, QMouseEvent
 from PySide6.QtOpenGL import QOpenGLShader, QOpenGLShaderProgram, QOpenGLVertexArrayObject
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 from camdesk.core.frames import NV12, LatestFrameBuffer, VideoFrame
 from camdesk.ui.theme import tokens
@@ -64,6 +64,8 @@ class ViewMode(Enum):
 
 class VideoWidget(QOpenGLWidget):
     double_clicked = Signal()
+    #: single click on the picture: (x, y) in 0–1 of the shown picture, and the widget point
+    picture_clicked = Signal(float, float, QPoint)
 
     def __init__(self, buffer: LatestFrameBuffer, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -88,6 +90,10 @@ class VideoWidget(QOpenGLWidget):
         self._watchdog.setInterval(WATCHDOG_MS)
         self._watchdog.timeout.connect(self._check_stalled)
         self._watchdog.start()
+        self._pending_click: QPoint | None = None
+        self._click_timer = QTimer(self)
+        self._click_timer.setSingleShot(True)
+        self._click_timer.timeout.connect(self._emit_single_click)
 
     # -- public ------------------------------------------------------------
 
@@ -113,8 +119,39 @@ class VideoWidget(QOpenGLWidget):
         if self.buffer.has_new:
             self.update()
 
+    def picture_point(self, pos: QPointF | QPoint) -> tuple[float, float] | None:
+        """Widget position → (x, y) in 0–1 of the picture, or None outside it (letterbox)."""
+        if self._frame_info is None:
+            return None
+        width, height = self._frame_info[0], self._frame_info[1]
+        sx, sy = self._quad_scale(width, height)
+        # The quad covers sx/sy of the -1…1 viewport, centered.
+        nx = (pos.x() / max(1, self.width()) * 2 - 1) / sx
+        ny = (pos.y() / max(1, self.height()) * 2 - 1) / sy
+        px, py = (nx + 1) / 2, (ny + 1) / 2
+        if not (0.0 <= px <= 1.0 and 0.0 <= py <= 1.0):
+            return None
+        return px, py
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Wait out the double-click interval: a double click means fullscreen, not focus.
+            self._pending_click = event.position().toPoint()
+            self._click_timer.start(QApplication.doubleClickInterval())
+        super().mouseReleaseEvent(event)
+
     def mouseDoubleClickEvent(self, event: object) -> None:  # noqa: N802
+        self._click_timer.stop()
+        self._pending_click = None
         self.double_clicked.emit()
+
+    def _emit_single_click(self) -> None:
+        pos, self._pending_click = self._pending_click, None
+        if pos is None:
+            return
+        point = self.picture_point(pos)
+        if point is not None:
+            self.picture_clicked.emit(point[0], point[1], pos)
 
     # -- OpenGL ------------------------------------------------------------
 
