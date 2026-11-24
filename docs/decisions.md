@@ -2,9 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 5)
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 6)
 
-Decisions 18–28 were made during development; each row says why.
+Decisions 18–35 were made during development; each row says why.
 
 ---
 
@@ -41,6 +41,13 @@ Decisions 18–28 were made during development; each row says why.
 | 22 | Low-latency input | FFmpeg `fflags=nobuffer` for the camera | Lower delay; drops only the single frame read while probing at connect time |
 | 27 | Core-layer text | Toast text from the controller lives in `core/messages.py` | Rule 7 keeps UI text in `ui/strings.py`, but core may not import ui |
 | 28 | Cross-thread signal wiring | Worker signals connect to controller **methods**, never lambdas | A lambda runs on the emitting thread and would touch AppState off the UI thread |
+| 29 | Custom title bar | Frameless window that keeps `WS_CAPTION/WS_THICKFRAME`; `WM_NCCALCSIZE` hides the native bar, `WM_NCHITTEST` reports caption/resize areas. `--native-frame` falls back | Keeps Windows Snap, Win+arrows, resize edges, shadow and rounded corners while drawing our own bar. Verified: maximized fits the work area exactly |
+| 30 | Wordmark in the app | `wordmark-transparent.png` (background removed by color un-blending); README keeps the dark version | The dark box around the logo showed on the lighter card |
+| 31 | Worker-thread timer cleanup | `CameraClient` shutdown runs on its own thread via `BlockingQueuedConnection` and deletes the poll timer there | Qt: "Timers cannot be stopped from another thread"; garbage-collecting it later could abort |
+| 32 | Test GC | Autouse fixture collects garbage after each test | GC at a random moment mid-stream destroyed old Qt objects and aborted test runs; not reproducible in the app (40 camera switches with forced GC) |
+| 33 | "No picture" watchdog | Reconnect if no frame within 10 s of connecting, or none for 5 s after | Seen on the phone right after IP Webcam starts: packets arrive but nothing decodes, which the read timeout can't catch |
+| 34 | "Can't reach" message | FFmpeg's `Immediate exit requested` (our open timeout firing) maps to "Can't reach the phone" | Found on the phone test: an unreachable IP showed the vague "The video stream failed" |
+| 35 | Maximized detection in the frame code | Ask Windows (`IsZoomed`), not Qt | Fullscreen → maximized: Qt still reported fullscreen, so ~7 px were cut off at every edge |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -220,6 +227,12 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
 | Flashlight on the front camera | ✅ warning toast, no command sent |
 | Night vision on/off | ✅ |
 | `disconnect()` | ✅ returns in 0.3 ms (never blocks the UI) |
+
+### Main window on the real phone (build step 6)
+- First runs right after IP Webcam started: RTSP opened and packets arrived, but **no frame decoded** for >10 s (GPU and CPU alike). A few minutes later the identical code decoded normally (first frame ~1 s). Cause is on the phone side; decision #33 now reconnects automatically.
+- In a dim room the camera delivered ~11–20 FPS instead of 30 (longer exposure). Normal camera behavior.
+- Main window with GPU decoding: first frame on screen, NV12 textures, 29.9 FPS drawn, 0 dropped (fake 1280×720 stream).
+- **Driven like a user against the phone (24/24 passed):** paste `http://192.168.8.105:8080` → connected in 1.1 s; 30.0 FPS drawn, D3D11VA, **2.8% CPU**, 1.9 ms decode→screen; T/+/− keys confirmed by the phone; F11/Esc; maximize fits the work area; unreachable IP → "Can't reach the phone" overlay; Change camera → recent list → reconnected. Phone settings restored.
 
 ### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).

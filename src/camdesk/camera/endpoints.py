@@ -100,5 +100,8 @@ def rtsp_url(host: str, port: int, username: str = "", password: str = "") -> st
     return f"rtsp://{auth}{host}:{port}{RTSP_H264}"
 
 
-def mjpeg_url(host: str, port: int) -> str:
-    return f"{http_base(host, port)}{MJPEG_VIDEO}"
+def mjpeg_url(host: str, port: int, username: str = "", password: str = "") -> str:
+    auth = ""
+    if username or password:
+        auth = f"{quote(username, safe='')}:{quote(password, safe='')}@"
+    return f"http://{auth}{host}:{port}{MJPEG_VIDEO}"

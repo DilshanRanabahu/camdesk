@@ -17,14 +17,15 @@
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
-> **Status: in development.** Version 1, build steps **1–5 of 10** done: live GPU-decoded video from the phone works,
-> and the camera can be controlled from the keyboard. The full dark UI and recording are next. See [progress](docs/README.md#project-status).
+> **Status: in development.** Version 1, build steps **1–6 of 10** done: the dark UI with its connect screen, live
+> GPU-decoded video and keyboard camera controls work. On-screen controls and recording are next. See [progress](docs/README.md#project-status).
 
 <p align="center">
-  <img src="docs/assets/preview-fake.png" alt="CamDesk live preview with the Ctrl+D debug overlay: 30 FPS, 0 dropped frames" width="800">
+  <img src="docs/assets/connect-screen.png" alt="CamDesk connect screen: IP address, port, login and recent cameras" width="800">
+  <br><br>
+  <img src="docs/assets/main-window.png" alt="CamDesk main window streaming the test pattern with the Ctrl+D debug overlay: 30 FPS, 0 dropped frames" width="800">
   <br>
-  <sub>Live preview (build step 4) showing the built-in test pattern and the <code>Ctrl+D</code> debug overlay.
-  The full dark UI from <a href="docs/ui-design.md">ui-design.md</a> comes in step 6.</sub>
+  <sub>Connect screen, and the main window streaming the built-in test pattern (<code>--fake</code>) with the <code>Ctrl+D</code> debug overlay.</sub>
 </p>
 
 ## Highlights
@@ -49,12 +50,13 @@ A smooth, modern Windows desktop app to view, record and control an Android phon
 git clone https://github.com/DilshanRanabahu/camdesk.git
 cd camdesk
 uv sync                                         # install dependencies
-uv run python -m camdesk --host 192.168.x.x     # first run: your phone's IP (shown in IP Webcam)
-uv run python -m camdesk                        # later runs: the IP is remembered
+uv run python -m camdesk                        # opens the connect screen; enter the IP shown in IP Webcam
+uv run python -m camdesk --host 192.168.x.x     # or connect straight away (the camera is remembered)
 uv run python -m camdesk --fake                 # no phone? built-in test pattern
 ```
 
-The temporary preview window is replaced by the full UI with a connect screen in step 6.
+Paste the address exactly as IP Webcam shows it (e.g. `http://192.168.1.5:8080`); CamDesk picks out the IP and port.
+If the custom title bar ever misbehaves, `--native-frame` uses the standard Windows one.
 
 | Key | Action |
 |---|---|
@@ -72,7 +74,7 @@ Recommended phone settings (resolution, Samsung battery settings, static IP): [d
 ## Development
 
 ```powershell
-uv run pytest            # 115 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
+uv run pytest            # 154 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
 uv run ruff check .      # lint
 uv run ruff format .     # format
 ```

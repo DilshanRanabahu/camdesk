@@ -30,6 +30,9 @@ class FakeSecrets:
     def set_password(self, camera_id: str, password: str) -> None:
         self.store[camera_id] = password
 
+    def delete_password(self, camera_id: str) -> None:
+        self.store.pop(camera_id, None)
+
 
 @dataclass
 class Rig:

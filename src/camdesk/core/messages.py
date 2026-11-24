@@ -11,3 +11,8 @@ CAMERA_UNREACHABLE = "Can't reach {camera}. Is IP Webcam running? The phone's IP
 CONNECTED = "Connected to {camera}"
 NOT_AVAILABLE = "{label} is not available on this camera"
 SETTINGS_SAVE_FAILED = "Couldn't save settings: {reason}"
+
+# Address validation (connect screen)
+ADDRESS_EMPTY = "Enter the phone's IP address"
+ADDRESS_INVALID = "That doesn't look like an IP address (example: 192.168.1.5)"
+PORT_INVALID = "Port must be a number from 1 to 65535"

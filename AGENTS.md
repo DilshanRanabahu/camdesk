@@ -17,8 +17,8 @@ If a request conflicts with these docs, say so and ask before proceeding. If a d
 
 ## Current Status
 
-- Version 1 build steps **1–5 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 6, UI shell.
-- `ui/preview_window.py` is a **temporary** window (talks to AppState/AppController like the real UI will); `MainWindow` replaces it in step 6. Its temporary keys `T C + - N A Ctrl+R` drive the controller until the buttons arrive in step 7.
+- Version 1 build steps **1–6 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 7, control dock + side panel.
+- `ui/main_window.py` is the real window (custom title bar, connect screen, status bar). The temporary keys `T C + - N A Ctrl+R` drive the controller until the buttons arrive in step 7; single-key shortcuts are off on the connect screen.
 - Repo: https://github.com/DilshanRanabahu/camdesk (public, branch `main`).
 
 ## Stack
@@ -35,6 +35,7 @@ uv run python -m camdesk         # Run the app (last camera from settings)
 uv run python -m camdesk --host 192.168.8.105   # Set and remember the phone IP
 uv run python -m camdesk --fake  # Run with the fake camera (no phone needed)
 uv run python -m camdesk --debug --debug-overlay   # Verbose log + Ctrl+D panel shown
+uv run python -m camdesk --native-frame           # Standard Windows title bar instead of the custom one
 uv run pytest                    # Run tests
 uv run ruff check .              # Lint
 uv run ruff format .             # Format
@@ -81,6 +82,9 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - `QSignalSpy.wait()` holds the GIL — see Testing.
 - **Never connect a worker-thread signal to a lambda** that touches AppState or widgets: a lambda has no thread, so it runs on the *emitting* (worker) thread. Connect to a method of a QObject that lives on the UI thread (Qt then queues the call) and use `self.sender()` to tell sources apart.
 - Any GL change must keep `tests/test_video_widget.py` (renders real frames, checks pixel colors) passing.
+- A `QTimer` (or any timer) owned by a worker `QThread` must be **deleted on that thread** before it quits — use a `BlockingQueuedConnection` shutdown slot and `shiboken6.delete(timer)`. Deleting it later from the UI thread (e.g. by garbage collection) warns "Timers cannot be stopped from another thread" and can abort the process.
+- On Windows, Qt's own warnings go to the debugger, not the console. To see them, set `QT_FORCE_STDERR_LOGGING=1` or install a handler with `qInstallMessageHandler`.
+- `QScreen.grabWindow(0, x, y, …)` takes coordinates **relative to that screen**, not global ones (the second monitor is at negative x).
 
 ## Code Style
 
@@ -98,6 +102,9 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - Tests must **not** need the real phone or network: use `camdesk.dev.fake_camera` (fixture `fake_camera` in `tests/conftest.py`) and `camdesk.dev.fake_video_source`. They live in `src/` so `--fake` mode can use them too.
 - Tests run with `CAMDESK_HOME` pointed at a temp folder (autouse fixture), so they never touch real settings, logs or captures.
 - Use the session-wide `qapp` fixture (a `QApplication`) for anything Qt; don't create your own `QCoreApplication`.
+- The autouse `collect_qt_garbage` fixture runs `gc.collect()` after every test. Keep it: without it, Python's GC destroys a previous test's Qt objects at a random moment mid-stream and Qt can abort the run.
+- Fixtures that start a `CameraClient` must stop it in a `finally:` — a running `QThread` that gets destroyed aborts the whole test process.
+- `pyproject` sets `-q`; add `-o addopts=""` to see the pass/fail summary line.
 - UI code: test logic in `core/` instead of testing widgets directly.
 - Waiting on Qt signals from worker threads: use `SignalRecorder` from `tests/qt_helpers.py`, **not** `QSignalSpy.wait()` — PySide6's `QSignalSpy.wait()` holds the GIL, so Python slots on worker threads never run and the test times out.
 - Run `uv run pytest` and `uv run ruff check .` before saying a task is done. Report failures honestly.

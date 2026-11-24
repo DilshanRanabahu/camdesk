@@ -4,7 +4,7 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
-> **Status:** build steps 1–5 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState and AppController, and a temporary preview window (until MainWindow in step 6).
+> **Status:** build steps 1–6 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
 
 ---
 
@@ -196,7 +196,8 @@ camara/
 │       │   ├── frames.py         # ✅ VideoFrame + LatestFrameBuffer (in core so the UI may read frames)
 │       │   ├── state.py          # ✅ AppState (QObject + signals, emit-on-change)
 │       │   ├── controller.py     # ✅ AppController — every user action, optimistic + throttled
-│       │   ├── messages.py       # ✅ User-facing text produced by core (toasts)
+│       │   ├── messages.py       # ✅ User-facing text produced by core (toasts, validation)
+│       │   ├── validation.py     # ✅ Parse the connect form (accepts http://ip:port as IP Webcam shows it)
 │       │   └── errors.py         # ✅ App-specific exceptions
 │       │
 │       ├── camera/               # Talking to the IP Webcam HTTP API
@@ -232,15 +233,16 @@ camara/
 │       │   └── fake_video_source.py  # ✅ Color bars + moving bar; can simulate failed opens / drops
 │       │
 │       ├── ui/
-│       │   ├── main_window.py    # Frameless window, layout, shortcuts
-│       │   ├── title_bar.py      # Custom title bar + camera selector pill
-│       │   ├── connect_view.py   # First-launch / connect screen
-│       │   ├── status_bar.py
+│       │   ├── main_window.py    # ✅ Custom-frame window: title bar, connect ⇄ video pages, status bar, shortcuts, geometry
+│       │   ├── win_frame.py      # ✅ Native Windows behavior for the custom frame (snap, resize, shadow) via WM_NCHITTEST
+│       │   ├── title_bar.py      # ✅ Custom title bar + camera selector pill + window buttons
+│       │   ├── connect_view.py   # ✅ Connect screen: wordmark, IP/port, login, recent cameras
+│       │   ├── status_bar.py     # ✅ Connection · battery · disk free · stream info
 │       │   ├── strings.py        # ✅ All user-facing text (English)
-│       │   ├── preview_window.py # ✅ TEMPORARY (step 4): bare live-video window until MainWindow (step 6)
 │       │   ├── video/
 │       │   │   ├── video_widget.py   # ✅ QOpenGLWidget, texture upload, view modes, repaint watchdog
 │       │   │   ├── shaders.py        # ✅ YUV → RGB shaders (NV12 / YUV420P, BT.601/709)
+│       │   │   ├── connection_overlay.py # ✅ Connecting / Reconnecting (dimmed) / Failed + Retry, Change camera
 │       │   │   └── overlays.py       # ✅ Debug overlay (Ctrl+D); later: REC badge, focus ring, flash
 │       │   ├── panels/
 │       │   │   ├── control_dock.py   # Floating auto-hide dock
@@ -253,13 +255,14 @@ camara/
 │       │   │   └── toast.py
 │       │   └── theme/
 │       │       ├── tokens.py         # ✅ Colors, spacing, radius, fonts (from ui-design.md)
-│       │       ├── stylesheet.py     # Builds QSS from tokens
-│       │       └── icons.py          # Loads + recolors Lucide SVGs
+│       │       ├── stylesheet.py     # ✅ Builds QSS + dark palette from tokens
+│       │       └── icons.py          # ✅ Inline Lucide-style SVG icons, recolored, crisp at 1×/2×
 │       │
 │       ├── resources/            # ✅ Logo files (built by scripts/make_icons.py)
 │       │   ├── app.ico           # ✅ Window/taskbar icon, 16–256 px
 │       │   ├── icon.png          # ✅ 1024 px transparent app icon
-│       │   ├── wordmark.png      # ✅ "CamDesk" logo (README banner, connect screen)
+│       │   ├── wordmark.png      # ✅ "CamDesk" logo on dark background (README banner)
+│       │   ├── wordmark-transparent.png # ✅ Same, background removed (connect screen)
 │       │   └── icons/            # Lucide SVG files — step 7
 │       │
 │       └── utils/
@@ -280,6 +283,9 @@ camara/
 │   ├── test_stream_service.py    # ✅ Reconnect, backoff, FAILED/retry, fallback, coalescing
 │   ├── test_rtsp_source.py       # ✅ PyAV source on a generated MKV file
 │   ├── test_video_widget.py      # ✅ Renders real frames, reads back pixel colors
+│   ├── test_main_window.py       # ✅ Pages, pill, overlay, recent/forget, geometry (fake phone)
+│   ├── test_validation.py        # ✅ Connect-form address parsing
+│   ├── test_win_frame.py         # ✅ Resize/caption hit-testing
 │   ├── test_state.py             # ✅ Emit-on-change, keep capabilities while switching
 │   ├── test_controller.py        # ✅ End-to-end: real client + stream, fake phone + fake video
 │   ├── test_recorder.py          # Segmenting at 30 min, MKV playable — step 8
@@ -352,7 +358,7 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 3. ✅ `stream/` — RTSP source + hardware decode + frame buffer + service
 4. ✅ `ui/video` — OpenGL video widget + debug overlay → **first live video**; 30 FPS ✅ · < 10% CPU ✅ · ~240 ms latency ⚠️
 5. ✅ `core/` — AppState + AppController wiring (temporary keys drive the phone)
-6. UI shell — theme, main window, title bar, connect screen, status bar
+6. ✅ UI shell — theme, main window, custom title bar, connect screen, connection overlay, status bar
 7. Control dock + side panel → camera controls working
 8. `capture/` — snapshot + MKV recording with 30-min segments
 9. Reconnect, toasts, settings persistence, shortcuts

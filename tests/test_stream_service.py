@@ -146,3 +146,79 @@ def test_bad_sink_is_removed(make_service) -> None:
     svc.add_packet_sink(broken_sink)
     svc._feed_sinks(b"x")
     assert broken_sink not in svc._sinks
+
+
+def test_reconnects_when_data_arrives_but_no_picture(make_service) -> None:
+    """Seen on the real phone right after IP Webcam starts: packets, but nothing decodes."""
+    from camdesk.stream.source import VideoSource
+
+    class PacketsOnly(VideoSource):
+        transport = "fake"
+
+        def open(self) -> None:
+            pass
+
+        def read(self):
+            while True:
+                time.sleep(0.005)
+                yield b"packet"  # data keeps coming, no VideoFrame ever
+
+        def close(self) -> None:
+            pass
+
+    svc = StreamService(
+        LatestFrameBuffer(),
+        [PacketsOnly],
+        backoff_s=(0.01,),
+        max_failures=2,
+        first_frame_timeout_s=0.2,
+    )
+    states = SignalRecorder(svc.state_changed)
+    svc.start()
+    try:
+        wait_for_state(states, ConnectionState.FAILED)
+        failed = next(a for a in states.calls if a[0] is ConnectionState.FAILED)
+        assert failed[1] == "No picture from the phone"
+    finally:
+        svc.stop()
+
+
+def test_stall_after_picture_reconnects(make_service) -> None:
+    from camdesk.dev.fake_video_source import FakeVideoSource
+    from camdesk.stream.source import VideoSource
+
+    plan = FakeVideoPlan(fps=200)
+
+    class FramesThenPackets(VideoSource):
+        transport = "fake"
+
+        def __init__(self) -> None:
+            self.inner = FakeVideoSource(plan)
+
+        def open(self) -> None:
+            self.inner.open()
+
+        def read(self):
+            for n, frame in enumerate(self.inner.read()):
+                yield frame
+                if n == 5:
+                    break
+            while True:  # picture freezes, data continues
+                time.sleep(0.005)
+                yield b"packet"
+
+        def close(self) -> None:
+            self.inner.close()
+
+    svc = StreamService(
+        LatestFrameBuffer(), [FramesThenPackets], backoff_s=(0.01,), stall_timeout_s=0.2
+    )
+    states = SignalRecorder(svc.state_changed)
+    svc.start()
+    try:
+        wait_for_state(states, ConnectionState.CONNECTED)
+        wait_for_state(states, ConnectionState.RECONNECTING)
+        msgs = [a[1] for a in states.calls if a[0] is ConnectionState.RECONNECTING]
+        assert "No picture from the phone" in msgs
+    finally:
+        svc.stop()

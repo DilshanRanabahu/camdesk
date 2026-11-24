@@ -6,7 +6,7 @@ Related docs: [feature.md](feature.md) · [decisions.md](decisions.md) · [archi
 
 Language: **English only**. All user-facing text lives in one module (`ui/strings.py`) so wording stays consistent.
 
-> **Implementation status (step 4):** design tokens (`ui/theme/tokens.py`), the OpenGL video area and the `Ctrl+D` debug overlay are built. A temporary bare preview window stands in for the main window until step 6; the title bar, connect screen, control dock, side panel, status bar and toasts come in steps 6–9.
+> **Implementation status (step 6):** built — tokens, stylesheet, icons, custom title bar with camera pill and window buttons, connect screen (§6.1), connection states (§6.2), status bar, video area and `Ctrl+D` debug overlay. Still to come: control dock + side panel (step 7), REC badge/snapshot flash (step 8), toasts and animations (step 9). Screenshots: [connect screen](assets/connect-screen.png) · [main window](assets/main-window.png).
 
 ---
 

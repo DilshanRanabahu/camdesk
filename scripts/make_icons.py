@@ -5,7 +5,8 @@
 Writes to src/camdesk/resources/:
 - icon.png      1024×1024, transparent outside the rounded square, solid inside
 - app.ico       16, 20, 24, 32, 40, 48, 64, 128, 256 px (PNG-compressed entries)
-- wordmark.png  "CamDesk" logo cropped to its content with an even margin
+- wordmark.png  "CamDesk" logo cropped to its content with an even margin (dark background)
+- wordmark-transparent.png  same, with the background removed (used inside the app)
 """
 
 from __future__ import annotations
@@ -73,6 +74,23 @@ def prepare_wordmark(src: Path) -> QImage:
     return from_array(crop)
 
 
+def remove_background(img: QImage) -> QImage:
+    """Make the flat dark background transparent, keeping glows and anti-aliased edges.
+
+    "Un-blends" each pixel from the background color: alpha grows with the distance from
+    the background, and the color is recovered as (pixel - bg·(1-alpha)) / alpha.
+    """
+    arr = to_array(img).astype(np.float32)
+    rgb = arr[..., :3]
+    background = np.median(rgb[:10, :10].reshape(-1, 3), axis=0)
+    distance = np.abs(rgb - background).max(axis=2)
+    alpha = np.clip(distance / 90.0, 0.0, 1.0)
+    safe = np.maximum(alpha, 1e-3)[..., None]
+    color = np.clip((rgb - background * (1 - alpha[..., None])) / safe, 0, 255)
+    out = np.dstack([color, alpha * 255]).round().astype(np.uint8)
+    return from_array(out)
+
+
 def write_ico(icon: QImage, path: Path) -> None:
     images = [
         png_bytes(
@@ -102,8 +120,9 @@ def main() -> int:
     icon.save(str(RESOURCES / "icon.png"))
     write_ico(icon, RESOURCES / "app.ico")
     wordmark = prepare_wordmark(Path(sys.argv[2]))
-    wordmark.save(str(RESOURCES / "wordmark.png"))
-    for name in ("icon.png", "app.ico", "wordmark.png"):
+    wordmark.save(str(RESOURCES / "wordmark.png"))  # dark background: README banner
+    remove_background(wordmark).save(str(RESOURCES / "wordmark-transparent.png"))  # in-app
+    for name in ("icon.png", "app.ico", "wordmark.png", "wordmark-transparent.png"):
         f = RESOURCES / name
         sys.stdout.write(f"{f.relative_to(RESOURCES.parents[2])}  {f.stat().st_size // 1024} KB\n")
     sys.stdout.write(f"wordmark: {wordmark.width()}x{wordmark.height()}\n")

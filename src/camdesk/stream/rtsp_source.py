@@ -183,7 +183,8 @@ def _friendly(exc: Exception | None) -> str:
         return "Wrong username or password"
     if "timed out" in text or "timeout" in text or "etimedout" in text:
         return "The phone did not respond in time"
-    if "refused" in text or "no route" in text or "unreachable" in text:
+    # "Immediate exit requested" = our open/read timeout interrupted FFmpeg (no answer).
+    if any(k in text for k in ("refused", "no route", "unreachable", "immediate exit")):
         return "Can't reach the phone"
     if "404" in text or "not found" in text:
         return "Video stream not found — is IP Webcam running?"

@@ -30,6 +30,9 @@ log = logging.getLogger(__name__)
 
 DEFAULT_BACKOFF_S = (0.5, 1.0, 2.0, 4.0, 8.0, 10.0)
 STATS_INTERVAL_S = 1.0
+FIRST_FRAME_TIMEOUT_S = 10.0  # data arrives but no picture yet -> reconnect
+STALL_TIMEOUT_S = 5.0  # picture stopped while data keeps arriving -> reconnect
+NO_PICTURE = "No picture from the phone"
 PacketSink = Callable[[Any], None]
 
 
@@ -45,9 +48,13 @@ class StreamService(QObject):
         *,
         max_failures: int = 5,
         backoff_s: Sequence[float] = DEFAULT_BACKOFF_S,
+        first_frame_timeout_s: float = FIRST_FRAME_TIMEOUT_S,
+        stall_timeout_s: float = STALL_TIMEOUT_S,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
+        self._first_frame_s = first_frame_timeout_s
+        self._stall_s = stall_timeout_s
         if not factories:
             raise ValueError("At least one source factory is required")
         self.buffer = buffer
@@ -173,11 +180,22 @@ class StreamService(QObject):
         fps = RateCounter()
         bitrate = RateCounter()
         got_frame = False
-        last_stats = 0.0
+        started = time.perf_counter()
+        # First report after a full interval, so FPS/bitrate are real numbers (not 0).
+        last_stats = started
+        last_frame = started
         for item in source.read():
             if self._stop.is_set():
                 break
+            now = time.perf_counter()
+            if not isinstance(item, VideoFrame):
+                # Packets arriving without decoded frames (seen right after IP Webcam starts)
+                # never trip the read timeout, so check for "no picture" here.
+                limit = self._stall_s if got_frame else self._first_frame_s
+                if now - last_frame > limit:
+                    raise StreamError(NO_PICTURE)
             if isinstance(item, VideoFrame):
+                last_frame = now
                 fps.add()
                 if not got_frame:
                     got_frame = True

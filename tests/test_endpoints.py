@@ -33,3 +33,7 @@ def test_stream_urls() -> None:
 def test_rtsp_credentials_are_escaped() -> None:
     url = ep.rtsp_url("10.0.0.2", 8080, "me", "p@ss:word")
     assert url == "rtsp://me:p%40ss%3Aword@10.0.0.2:8080/h264_aac.sdp"
+
+
+def test_mjpeg_credentials() -> None:
+    assert ep.mjpeg_url("10.0.0.2", 8080, "me", "p@ss") == "http://me:p%40ss@10.0.0.2:8080/video"

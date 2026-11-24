@@ -50,6 +50,7 @@ ZOOM_STEP = 0.5  # +/- keys change zoom by 0.5×
 class Secrets(Protocol):
     def get_password(self, camera_id: str) -> str: ...
     def set_password(self, camera_id: str, password: str) -> None: ...
+    def delete_password(self, camera_id: str) -> None: ...
 
 
 StreamFactory = Callable[[CameraProfile, str], Any]  # -> StreamService
@@ -131,6 +132,22 @@ class AppController(QObject):
         self._zoom_pending = None
         self.state.reset_camera_data()
         self.state.set_connection(ConnectionState.IDLE)
+
+    def close_camera(self) -> None:
+        """Disconnect and deselect the camera (the UI goes back to the connect screen)."""
+        self.disconnect()
+        self.state.set_camera(None)
+
+    def forget_camera(self, camera_id: str) -> None:
+        """Remove a saved camera and its password."""
+        if self.camera is not None and self.camera.id == camera_id:
+            self.close_camera()
+        self.settings.remove_camera(camera_id)
+        self._secrets.delete_password(camera_id)
+        self.save_settings()
+
+    def find_camera(self, host: str, port: int) -> CameraProfile | None:
+        return next((c for c in self.settings.cameras if (c.host, c.port) == (host, port)), None)
 
     def retry(self) -> None:
         if self._stream is not None:

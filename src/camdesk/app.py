@@ -28,6 +28,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="IP Webcam port")
     parser.add_argument("--debug", action="store_true", help="verbose logging")
     parser.add_argument("--debug-overlay", action="store_true", help="start with Ctrl+D shown")
+    parser.add_argument(
+        "--native-frame", action="store_true", help="use the standard Windows title bar"
+    )
     parser.add_argument("--quit-after", type=float, metavar="SECONDS", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
@@ -84,14 +87,8 @@ def run(argv: Sequence[str] | None = None) -> int:
         known = next((c for c in settings.cameras if c.host == args.host), None)
         camera = known or CameraProfile(name=args.host, host=args.host, port=args.port)
 
-    if not args.fake and camera is None:
-        # The connect screen arrives in build step 6; until then the IP comes from --host.
-        log.error("No camera configured. Run with --host <phone IP> or --fake.")
-        sys.stderr.write("No camera yet: run  camdesk --host 192.168.x.x   (or --fake)\n")
-        return 2
-
     from PySide6.QtCore import QTimer
-    from PySide6.QtGui import QIcon
+    from PySide6.QtGui import QIcon, QPixmap
     from PySide6.QtWidgets import QApplication
 
     from camdesk.camera import endpoints as ep
@@ -103,14 +100,17 @@ def run(argv: Sequence[str] | None = None) -> int:
     from camdesk.stream.mjpeg_source import MjpegSource
     from camdesk.stream.rtsp_source import RtspSource
     from camdesk.stream.service import StreamService
-    from camdesk.ui.preview_window import PreviewWindow
+    from camdesk.ui.main_window import MainWindow
+    from camdesk.ui.theme import stylesheet
 
     _set_default_gl_format()
     _set_windows_app_id()
     app = QApplication(sys.argv[:1])
     app.setApplicationName("CamDesk")
     app.setApplicationVersion(__version__)
-    app.setWindowIcon(QIcon(str(paths.app_icon())))
+    app_icon = QIcon(str(paths.app_icon()))
+    app.setWindowIcon(app_icon)
+    stylesheet.apply(app)
 
     buffer = LatestFrameBuffer()  # shared by every stream and the video widget
     fake_camera = None
@@ -132,19 +132,26 @@ def run(argv: Sequence[str] | None = None) -> int:
                 buffer,
                 [
                     lambda: RtspSource(ep.rtsp_url(host, port, user, password)),
-                    lambda: MjpegSource(ep.mjpeg_url(host, port)),
+                    lambda: MjpegSource(ep.mjpeg_url(host, port, user, password)),
                 ],
             )
 
     state = AppState()
     client = CameraClient()
     controller = AppController(state, settings, client, make_stream)
-    window = PreviewWindow(buffer, state, controller)
-    window.show()
+    window = MainWindow(
+        buffer,
+        state,
+        controller,
+        app_icon=app_icon,
+        wordmark=QPixmap(str(paths.resources_dir() / "wordmark-transparent.png")),
+        custom_frame=not args.native_frame,
+    )
+    window.show_restored()
     if args.debug_overlay:
         window.debug.toggle()
-    assert camera is not None
-    controller.connect_camera(camera, remember=not args.fake)
+    if camera is not None:  # otherwise the connect screen is shown
+        controller.connect_camera(camera, remember=not args.fake)
     if args.quit_after:
         QTimer.singleShot(int(args.quit_after * 1000), app.quit)
 

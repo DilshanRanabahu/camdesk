@@ -124,6 +124,7 @@ def test_hwaccel_candidates_end_with_software() -> None:
         ("Server returned 401 Unauthorized", "Wrong username or password"),
         ("Connection timed out", "The phone did not respond in time"),
         ("Connection refused", "Can't reach the phone"),
+        ("[Errno 1414092869] Immediate exit requested: 'rtsp://x'", "Can't reach the phone"),
         ("Server returned 404 Not Found", "Video stream not found — is IP Webcam running?"),
         ("something odd", "The video stream failed"),
     ],

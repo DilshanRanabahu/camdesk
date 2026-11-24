@@ -11,7 +11,8 @@ import logging
 from typing import Any
 
 import httpx
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+import shiboken6
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal, Slot
 
 from camdesk.camera import capabilities as caps
 from camdesk.camera import endpoints as ep
@@ -139,7 +140,16 @@ class _Worker(QObject):
 
     @Slot()
     def shutdown(self) -> None:
+        """Runs on the worker thread: the poll timer must be deleted by the thread that owns it.
+
+        Destroying it later from the UI thread (e.g. by garbage collection) makes Qt warn
+        "Timers cannot be stopped from another thread" and can abort the process.
+        """
         self.disconnect_camera()
+        if self._timer is not None:
+            self._timer.stop()
+            shiboken6.delete(self._timer)
+            self._timer = None
 
     def _set_reachable(self, reachable: bool, message: str) -> None:
         if reachable != self._reachable:
@@ -185,7 +195,11 @@ class CameraClient(QObject):
         self._disconnect_requested.connect(self._worker.disconnect_camera)
         self._refresh_requested.connect(self._worker.refresh)
         self._execute_requested.connect(self._worker.execute)
-        self._shutdown_requested.connect(self._worker.shutdown)
+        # Blocking: close() must wait until the worker has cleaned up before the thread quits
+        # (QThread.quit() may exit before a normally queued shutdown call ever runs).
+        self._shutdown_requested.connect(
+            self._worker.shutdown, Qt.ConnectionType.BlockingQueuedConnection
+        )
 
         w = self._worker
         w.status_received.connect(self.status_received)

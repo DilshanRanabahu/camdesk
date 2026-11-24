@@ -15,6 +15,7 @@ VIDEO_LETTERBOX = "#000000"
 TEXT_PRIMARY = "#E8EAED"
 TEXT_SECONDARY = "#9AA0AA"
 TEXT_DISABLED = "#5C626C"
+TEXT_ON_ACCENT = "#FFFFFF"
 
 # -- accent & status -------------------------------------------------------
 ACCENT = "#4C8DFF"
@@ -38,6 +39,22 @@ SIZE_MONO = 12
 SPACE_1, SPACE_2, SPACE_3, SPACE_4, SPACE_6, SPACE_8 = 4, 8, 12, 16, 24, 32
 RADIUS_SM = 6
 RADIUS_MD = 10
+
+# -- layout (px) -------------------------------------------------------------
+TITLEBAR_HEIGHT = 44
+STATUSBAR_HEIGHT = 28
+WINDOW_BUTTON_WIDTH = 46
+CONNECT_CARD_WIDTH = 380
+WORDMARK_WIDTH = 240
+CONTROL_HEIGHT = 36
+ICON_SM = 16
+ICON_MD = 18
+ICON_LG = 22
+STATUS_DOT = 8
+RESIZE_BORDER = 6  # invisible resize margin of the frameless window
+WINDOW_MIN_WIDTH = 960
+WINDOW_MIN_HEIGHT = 600
+DIM_OVERLAY = "rgba(0, 0, 0, 0.55)"  # darkens the last frame while reconnecting
 
 # -- motion (ms) -------------------------------------------------------------
 ANIM_FAST = 120

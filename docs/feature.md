@@ -4,7 +4,7 @@ A Windows desktop app to view, record and control an Android phone running the *
 
 Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [architecture.md](architecture.md)
 
-> **Progress (2026-11-24):** Version 1 build steps **1–5 of 10** done — live GPU video works with the real phone, and every camera control works through AppController (temporary keys until the buttons in step 7). Next: step 6 (UI shell). `[x]` = done.
+> **Progress (2026-11-24):** Version 1 build steps **1–6 of 10** done — dark UI with custom title bar, connect screen and status bar; live GPU video; every camera control works through AppController (temporary keys until the buttons in step 7). Next: step 7. `[x]` = done.
 
 ## Tech Stack
 
@@ -29,10 +29,10 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 ## Version 1 — Core (build first)
 
 ### Connection
-- [ ] 1. IP, port, optional username/password fields + **Connect** button
-- [ ] 2. Connection status indicator (connected / connecting / lost)
+- [x] 1. IP, port, optional username/password fields + **Connect** button (paste `http://ip:port` straight from IP Webcam)
+- [x] 2. Connection status indicator (connected / connecting / lost) — dot in the pill + status bar + overlay with Retry
 - [x] 3. Auto-reconnect when Wi-Fi drops (with backoff) — works; on-screen reconnect messages come in step 9
-- [x] 4. Remember the last camera used (saved in settings; set with `--host` until the connect screen in step 6)
+- [x] 4. Remember the last camera used (+ recent cameras list, forget button)
 
 ### Live View
 - [x] 5. Smooth live video with GPU decoding (RTSP H.264, MJPEG fallback)
@@ -58,10 +58,10 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 
 ### Status Bar
 - [ ] 19. Phone battery level — only when the phone reports it (IP Webcam 1.19 on the A06 sends no sensor data)
-- [ ] 20. Recording status and free disk space
+- [ ] 20. Recording status and free disk space (free disk space ✅; recording status in step 8)
 
 ### UI
-- [ ] Dark theme
+- [x] Dark theme (tokens → stylesheet + palette)
 
 ---
 
