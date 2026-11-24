@@ -307,7 +307,8 @@ camara/
     ├── run.ps1                   # ✅ Run in dev mode (passes args through)
     ├── make_icons.py             # ✅ Builds icon.png, app.ico, wordmark.png from source images
     ├── camdesk_entry.py          # ✅ Entry point Nuitka compiles
-    └── build.ps1                 # ✅ Nuitka → dist\CamDesk\CamDesk.exe (+ -Zip), then smoke test
+    ├── build.ps1                 # ✅ Nuitka → dist\CamDesk\CamDesk.exe (+ -Zip / -Installer), then smoke test
+    └── installer.iss             # ✅ Inno Setup wizard → dist\CamDesk-Setup-<version>.exe
 ```
 
 ---

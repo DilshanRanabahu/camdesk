@@ -2,10 +2,13 @@
 #
 #   .\scripts\build.ps1            -> dist\CamDesk\CamDesk.exe (folder build: fast start, no unpacking)
 #   .\scripts\build.ps1 -Zip       -> also dist\CamDesk-<version>-win64.zip
+#   .\scripts\build.ps1 -Installer -> also dist\CamDesk-Setup-<version>.exe (install wizard)
+#   .\scripts\build.ps1 -Installer -SkipBuild   -> only re-pack the existing dist\CamDesk
 #
 # Needs: uv, and a C compiler (Visual Studio Build Tools with C++; Nuitka finds it).
+# -Installer also needs Inno Setup 6 (winget install JRSoftware.InnoSetup).
 # The first build compiles everything and takes a while; later builds reuse Nuitka's cache.
-param([switch]$Zip)
+param([switch]$Zip, [switch]$Installer, [switch]$SkipBuild)
 
 # "Continue", not "Stop": Nuitka prints progress on stderr, and Windows PowerShell 5.1 turns
 # any stderr line from a native program into a terminating error under "Stop" (the first build
@@ -14,6 +17,10 @@ $ErrorActionPreference = "Continue"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
 $version = (Select-String -Path "src\camdesk\__init__.py" -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+if ($SkipBuild) {
+    if (-not (Test-Path dist\CamDesk\CamDesk.exe)) { throw "-SkipBuild: dist\CamDesk\CamDesk.exe not found" }
+    Write-Host "Skipping the Nuitka build; packaging the existing dist\CamDesk ..."
+} else {
 Write-Host "Building CamDesk $version ..."
 
 uv run python -m nuitka `
@@ -60,6 +67,20 @@ if ($proc.ExitCode -ne 0) {
 }
 Write-Host "Smoke test passed (fake camera: video + snapshot)"
 Remove-Item -Recurse -Force $smokeHome
+}
+
+if ($Installer) {
+    $iscc = @(
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $iscc) { throw "Inno Setup 6 not found - run: winget install JRSoftware.InnoSetup" }
+    & $iscc /Q "/DAppVersion=$version" scripts\installer.iss
+    if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed ($LASTEXITCODE)" }
+    $setup = "dist\CamDesk-Setup-$version.exe"
+    Write-Host ("Installer: {0}  ({1:N0} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))
+}
 
 if ($Zip) {
     $zipPath = "dist\CamDesk-$version-win64.zip"

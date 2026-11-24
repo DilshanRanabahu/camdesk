@@ -37,7 +37,18 @@ A smooth, modern Windows desktop app to view, record and control an Android phon
 - **Recording without re-encoding:** H.264 + AAC saved straight to crash-safe MKV, split every 30 minutes — measured on the phone: **no extra CPU** while recording, 0 dropped packets (~7 GB per hour at IP Webcam's fixed ~16 Mbps).
 - **Private:** no telemetry; talks only to your phone on the local network. Passwords live in Windows Credential Manager.
 
-## Requirements
+## Download
+
+Get the latest version from **[Releases](https://github.com/DilshanRanabahu/camdesk/releases/latest)** (Windows 10/11, 64-bit, no Python needed):
+
+- **`CamDesk-Setup-<version>.exe`** — installer (Next → Next → Install). No admin rights needed; uninstall from **Settings → Apps**.
+- **`CamDesk-<version>-win64.zip`** — portable: unzip anywhere and run `CamDesk\CamDesk.exe`.
+
+The files are not code-signed yet, so Windows SmartScreen may show *"Windows protected your PC"* — click **More info → Run anyway**.
+
+Then install [IP Webcam](https://play.google.com/store/apps/details?id=com.pas.webcam) on your Android phone, tap **Start server**, and type the IP address it shows into CamDesk (phone and PC on the same Wi-Fi).
+
+## Requirements (to run from source)
 
 - Windows 10/11
 - [uv](https://docs.astral.sh/uv/): `winget install astral-sh.uv` (open a new terminal afterwards)
@@ -84,11 +95,14 @@ Recommended phone settings (resolution, Samsung battery settings, static IP): [d
 ```powershell
 .\scripts\build.ps1        # -> dist\CamDesk\CamDesk.exe (portable folder, ~200 MB)
 .\scripts\build.ps1 -Zip   # also dist\CamDesk-<version>-win64.zip to share
+.\scripts\build.ps1 -Installer             # also dist\CamDesk-Setup-<version>.exe (install wizard)
+.\scripts\build.ps1 -Installer -SkipBuild  # only re-pack the existing build (~1.5 min)
 ```
 
 - Needs Visual Studio Build Tools (C++) for Nuitka. The first build takes ~15–20 min, later ones ~6 min.
 - Every build ends with an automatic **smoke test** of the exe: it connects to the test pattern, saves a snapshot and exits; the build fails if anything is missing.
 - The result is a portable folder — copy the whole `CamDesk` folder anywhere and run `CamDesk.exe`. It starts in ~2 s (the very first launch is slower while Windows Defender scans the new files).
+- **Installer** (`-Installer`, needs [Inno Setup 6](https://jrsoftware.org/isinfo.php): `winget install JRSoftware.InnoSetup`): a normal Next → Next → Install wizard, ~52 MB. Installs for the current user without an admin prompt (into `%LOCALAPPDATA%\Programs\CamDesk`; "all users" can be chosen in the wizard), adds a Start menu shortcut (desktop icon optional) and an entry in **Settings → Apps** to uninstall. Uninstalling keeps your settings, snapshots and recordings.
 - Test the exe against your phone: `dist\CamDesk\CamDesk.exe --host 192.168.x.x --smoke-test` (exit code 0 = video, snapshot and a 3 s recording all worked; details in the log).
 
 ## Development

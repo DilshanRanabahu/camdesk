@@ -40,6 +40,7 @@ uv run python -m camdesk --debug --debug-overlay   # Verbose log + Ctrl+D panel 
 uv run python -m camdesk --native-frame           # Standard Windows title bar instead of the custom one
 uv run python -m camdesk --fake --smoke-test      # Connect, snapshot, record 3 s, exit 0/1 (also works on CamDesk.exe)
 .\scripts\build.ps1 -Zip                         # Build dist\CamDesk\CamDesk.exe (+ zip); runs the smoke test
+.\scripts\build.ps1 -Installer [-SkipBuild]      # + dist\CamDesk-Setup-<version>.exe (Inno Setup 6, scripts\installer.iss)
 uv run pytest                    # Run tests
 uv run ruff check .              # Lint
 uv run ruff format .             # Format

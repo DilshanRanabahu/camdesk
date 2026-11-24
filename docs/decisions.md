@@ -4,7 +4,7 @@ Final decisions for the project. Anything not listed here follows [architecture.
 
 **Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (Version 1 complete, after build step 10)
 
-Decisions 18–53 were made during development; each row says why.
+Decisions 18–54 were made during development; each row says why.
 
 ---
 
@@ -65,6 +65,7 @@ Decisions 18–53 were made during development; each row says why.
 | 50 | Quality slider | Relabelled "MJPEG quality" with an honest tooltip | Measured: the H.264 stream (and recordings) stay ~16 Mbps at every quality and at 720p |
 | 51 | Exe layout | Nuitka **standalone folder**, not one-file | One-file unpacks to a temp folder on every launch (slower start, antivirus false positives); measured launch → first frame: 2.1 s exe vs 2.8 s from source |
 | 52 | Keyring backend | Set the Windows Credential Manager backend explicitly | keyring finds backends via package metadata, which a packaged exe can lose — passwords would silently not save |
+| 54 | Installer | Inno Setup 6, **per-user by default** (no admin prompt; "all users" optional), fixed AppId, uninstall keeps settings and footage, no wildcard delete of the install folder | A user can pick any folder — deleting `{app}\*` on upgrade could wipe unrelated files. Verified: silent install → smoke test from the installed copy → uninstall leaves nothing behind |
 | 53 | Build verification | `--smoke-test` flag; `build.ps1` runs it on every build | Caught `av._cyutil` missing from the first exe; also used to verify the exe against the phone |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
@@ -79,7 +80,7 @@ Decisions 18–53 were made during development; each row says why.
 ### Release
 | # | Topic | Decision | Reason |
 |---|---|---|---|
-| 13 | Distribution | **Portable folder** `dist\CamDesk\` with `CamDesk.exe` (zip to share); Inno Setup installer later | Fastest way to run it ✅ |
+| 13 | Distribution | **Portable folder** `dist\CamDesk\` with `CamDesk.exe` (zip to share) **and** an Inno Setup installer `CamDesk-Setup-<version>.exe` | Portable for testing, wizard for normal users ✅ |
 | 14 | Icon / logo | ✅ Camera lens on a monitor with Wi-Fi arcs, dark rounded square, accent `#4C8DFF` (made with ChatGPT); plus a "Cam**Desk**" wordmark | Matches the UI theme; readable from 24 px up. Optional later: a lens-only variant for 16 px |
 | 15 | Auto-update | **Not needed** | Personal use |
 | 16 | License | Decide only if published (e.g. MIT); PySide6 is LGPL — fine for personal/free use | Not needed now |
