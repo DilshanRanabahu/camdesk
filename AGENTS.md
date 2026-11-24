@@ -17,8 +17,8 @@ If a request conflicts with these docs, say so and ask before proceeding. If a d
 
 ## Current Status
 
-- Version 1 build steps **1–4 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 5, AppState + AppController.
-- `ui/preview_window.py` is a **temporary** window wired directly in `app.py`; `MainWindow` replaces it in step 6.
+- Version 1 build steps **1–5 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 6, UI shell.
+- `ui/preview_window.py` is a **temporary** window (talks to AppState/AppController like the real UI will); `MainWindow` replaces it in step 6. Its temporary keys `T C + - N A Ctrl+R` drive the controller until the buttons arrive in step 7.
 - Repo: https://github.com/DilshanRanabahu/camdesk (public, branch `main`).
 
 ## Stack
@@ -52,7 +52,7 @@ uv was installed with winget; a terminal opened before that may not have it on `
 4. **`core/models.py`** holds plain dataclasses only — no Qt widgets, no I/O.
 5. All camera URLs and setting keys live in **`camera/endpoints.py`** only. No URL strings anywhere else.
 6. All colors, sizes and fonts come from **`ui/theme/tokens.py`**. No hex colors or pixel sizes hard-coded in widgets.
-7. All user-facing text lives in one module (`ui/strings.py`). English only.
+7. All user-facing text lives in `ui/strings.py`; text produced by the core layer (toasts) lives in `core/messages.py` (core can't import ui). English only.
 8. **`app.py` is the composition root** — the only module that imports both services and UI to wire them together.
 
 ## Performance Rules (the main goal)
@@ -79,6 +79,7 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - `QShaderProgram.setUniformValueArray(loc, data, 1, 9)` uploads **nothing** for a `mat3` → black video. Use `QMatrix3x3`.
 - Upload textures by passing NumPy arrays straight to `glTexImage2D/glTexSubImage2D`; raw `int` pointers are rejected.
 - `QSignalSpy.wait()` holds the GIL — see Testing.
+- **Never connect a worker-thread signal to a lambda** that touches AppState or widgets: a lambda has no thread, so it runs on the *emitting* (worker) thread. Connect to a method of a QObject that lives on the UI thread (Qt then queues the call) and use `self.sender()` to tell sources apart.
 - Any GL change must keep `tests/test_video_widget.py` (renders real frames, checks pixel colors) passing.
 
 ## Code Style

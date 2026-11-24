@@ -7,9 +7,23 @@ releases the GIL like app.exec() does in the real app.
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import QEventLoop, QTimer, SignalInstance
+
+
+def wait_until(predicate: Callable[[], bool], timeout_ms: int = 3000, step_ms: int = 10) -> bool:
+    """Run the Qt event loop until predicate() is true (GIL-friendly). False on timeout."""
+    deadline = time.monotonic() + timeout_ms / 1000
+    while not predicate():
+        if time.monotonic() > deadline:
+            return False
+        loop = QEventLoop()
+        QTimer.singleShot(step_ms, loop.quit)
+        loop.exec()
+    return True
 
 
 class SignalRecorder:

@@ -7,7 +7,8 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QLabel, QWidget
 
 from camdesk.core.frames import LatestFrameBuffer
-from camdesk.core.models import StreamInfo
+from camdesk.core.models import CameraFacing
+from camdesk.core.state import AppState
 from camdesk.ui import strings
 from camdesk.ui.theme import tokens
 from camdesk.utils.timing import CpuMeter
@@ -26,11 +27,11 @@ def _mono_font() -> QFont:
 class DebugOverlay(QLabel):
     """Ctrl+D panel: render/stream FPS, decoder, bitrate, frame age, dropped frames, CPU."""
 
-    def __init__(self, video: QWidget, buffer: LatestFrameBuffer) -> None:
+    def __init__(self, video: QWidget, buffer: LatestFrameBuffer, state: AppState) -> None:
         super().__init__(video)
         self._video = video
         self._buffer = buffer
-        self._info = StreamInfo()
+        self._state = state
         self._cpu = CpuMeter()
         self.setFont(_mono_font())
         self.setTextFormat(Qt.TextFormat.PlainText)
@@ -44,9 +45,6 @@ class DebugOverlay(QLabel):
         self._timer.timeout.connect(self.refresh)
         self.hide()
 
-    def set_stream_info(self, info: StreamInfo) -> None:
-        self._info = info
-
     def toggle(self) -> None:
         self.setVisible(not self.isVisible())
         if self.isVisible():
@@ -58,7 +56,9 @@ class DebugOverlay(QLabel):
 
     def refresh(self) -> None:
         none = strings.DEBUG_NO_DATA
-        info = self._info
+        info = self._state.stream_info
+        cam = self._state.camera_status
+        caps = self._state.capabilities
         video = self._video
         render_fps = getattr(video, "render_fps", None)
         age = getattr(video, "last_frame_age_ms", None)
@@ -82,6 +82,16 @@ class DebugOverlay(QLabel):
             else f"{strings.DEBUG_FRAME_AGE:<10}{none}",
             f"{strings.DEBUG_DROPPED:<10}{self._buffer.dropped}",
             f"{strings.DEBUG_CPU:<10}{whole:4.1f}%  ({one_core:.0f}% of 1 core)",
+            "",
+            f"{strings.DEBUG_CAMERA:<10}"
+            + (strings.DEBUG_FRONT if cam.facing is CameraFacing.FRONT else strings.DEBUG_BACK)
+            + f" · {cam.zoom_ratio:.1f}× (max {caps.zoom_max_ratio:.0f}×)",
+            f"{strings.DEBUG_TORCH:<10}"
+            + (strings.DEBUG_ON if cam.torch else strings.DEBUG_OFF)
+            + ("" if caps.has_torch else f" ({strings.DEBUG_UNAVAILABLE})"),
+            f"{strings.DEBUG_NIGHT:<10}"
+            + (strings.DEBUG_ON if cam.night_vision else strings.DEBUG_OFF),
+            f"{strings.DEBUG_PHONE:<10}{cam.video_size or none} · q{cam.quality}",
         ]
         self.setText("\n".join(lines))
         self.adjustSize()

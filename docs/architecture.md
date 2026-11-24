@@ -4,7 +4,7 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
-> **Status:** build steps 1–4 done (✅ in the folder tree and build order). `app.py` is the composition root: until AppState/AppController (step 5) it wires the stream straight to a temporary preview window.
+> **Status:** build steps 1–5 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState and AppController, and a temporary preview window (until MainWindow in step 6).
 
 ---
 
@@ -100,9 +100,11 @@ Both RTSP and MJPEG implement the same `VideoSource` interface, so the rest of t
 
 ## 4. State & Data Flow
 
-### AppState (single source of truth — planned, step 5)
+### AppState (single source of truth) ✅
 ```python
 class AppState(QObject):
+    # the active CameraProfile (or None)
+    camera_changed = Signal(object)
     # IDLE, CONNECTING, CONNECTED, RECONNECTING, FAILED
     connection_changed = Signal(ConnectionState)
     # resolution, fps, bitrate, decoder
@@ -117,9 +119,20 @@ class AppState(QObject):
     recording_changed = Signal(RecordingState)
     # messages for the toast system
     notification = Signal(Toast)
+    # a new frame is waiting in the LatestFrameBuffer (re-emitted from the active stream)
+    frame_ready = Signal()
 ```
 
-The data models it carries already exist in `core/models.py`.
+Setters emit **only when the value changes**. `set_capabilities(None)` keeps the previous value (phone mid camera-switch).
+
+### AppController ✅
+- Every user action: `connect_camera`, `disconnect`, `retry`, `set_torch`, `switch_camera`, `set_zoom`/`zoom_in`/`zoom_out`, `focus`, `set_night_vision`, `set_quality`, `set_video_size`, `set_orientation`, `shutdown`.
+- Services are **injected** (`client`, `make_stream(profile, password)`, `secrets`, `save_settings`) so tests use fakes.
+- **Optimistic:** AppState changes at once; the phone's next status (or a failure toast + refresh) corrects it.
+- **Capability-aware:** asking for something the camera can't do (e.g. torch on the front camera) shows a warning instead of sending.
+- **Zoom throttling:** first change is sent at once, then at most one command per 80 ms; the last value always lands.
+- **Never blocks:** `disconnect()` stops the stream without waiting (`stop(timeout_s=0)`); settings are saved on a worker thread.
+- Stream signals connect to controller **methods** (not lambdas) so they're queued to the UI thread; late signals from an old stream are ignored via `sender()`.
 
 ### Example flow — user turns on the flashlight
 ```
@@ -181,8 +194,9 @@ camara/
 │       ├── core/                 # Plain Python — no Qt widgets, no network
 │       │   ├── models.py         # ✅ Dataclasses: CameraProfile, StreamInfo, CameraStatus, DeviceInfo…
 │       │   ├── frames.py         # ✅ VideoFrame + LatestFrameBuffer (in core so the UI may read frames)
-│       │   ├── state.py          # AppState (QObject + signals) — step 5
-│       │   ├── controller.py     # AppController — handles user actions — step 5
+│       │   ├── state.py          # ✅ AppState (QObject + signals, emit-on-change)
+│       │   ├── controller.py     # ✅ AppController — every user action, optimistic + throttled
+│       │   ├── messages.py       # ✅ User-facing text produced by core (toasts)
 │       │   └── errors.py         # ✅ App-specific exceptions
 │       │
 │       ├── camera/               # Talking to the IP Webcam HTTP API
@@ -254,7 +268,7 @@ camara/
 │
 ├── tests/
 │   ├── conftest.py               # ✅ Temp CAMDESK_HOME per test, shared QApplication, fake_camera
-│   ├── qt_helpers.py             # ✅ SignalRecorder (QSignalSpy.wait() holds the GIL)
+│   ├── qt_helpers.py             # ✅ SignalRecorder + wait_until (QSignalSpy.wait() holds the GIL)
 │   ├── test_fake_camera.py       # ✅
 │   ├── test_logging.py           # ✅
 │   ├── test_settings.py          # ✅
@@ -266,7 +280,8 @@ camara/
 │   ├── test_stream_service.py    # ✅ Reconnect, backoff, FAILED/retry, fallback, coalescing
 │   ├── test_rtsp_source.py       # ✅ PyAV source on a generated MKV file
 │   ├── test_video_widget.py      # ✅ Renders real frames, reads back pixel colors
-│   ├── test_controller.py        # With fake camera + fake video source — step 5
+│   ├── test_state.py             # ✅ Emit-on-change, keep capabilities while switching
+│   ├── test_controller.py        # ✅ End-to-end: real client + stream, fake phone + fake video
 │   ├── test_recorder.py          # Segmenting at 30 min, MKV playable — step 8
 │   └── test_storage.py           # step 8
 │
@@ -336,7 +351,7 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 2. ✅ `camera/` — endpoints + client, verified against the phone
 3. ✅ `stream/` — RTSP source + hardware decode + frame buffer + service
 4. ✅ `ui/video` — OpenGL video widget + debug overlay → **first live video**; 30 FPS ✅ · < 10% CPU ✅ · ~240 ms latency ⚠️
-5. `core/` — AppState + AppController wiring
+5. ✅ `core/` — AppState + AppController wiring (temporary keys drive the phone)
 6. UI shell — theme, main window, title bar, connect screen, status bar
 7. Control dock + side panel → camera controls working
 8. `capture/` — snapshot + MKV recording with 30-min segments

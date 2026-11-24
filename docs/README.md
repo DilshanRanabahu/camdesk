@@ -19,8 +19,8 @@ Rules for AI coding agents are in [../AGENTS.md](../AGENTS.md) at the project ro
 | 2. Camera control client | ✅ verified on the phone |
 | 3. Video stream service | ✅ GPU decode, reconnect, MJPEG fallback |
 | 4. Live OpenGL preview + debug overlay | ✅ 30 FPS, ~2% CPU |
-| 5. AppState + AppController | next |
-| 6. UI shell (main window, connect screen) | |
+| 5. AppState + AppController | ✅ optimistic, capability-aware, throttled zoom |
+| 6. UI shell (main window, connect screen) | next |
 | 7. Controls (dock + side panel) | |
 | 8. Snapshots + MKV recording | |
 | 9. Polish (toasts, reconnect UI, shortcuts) | |

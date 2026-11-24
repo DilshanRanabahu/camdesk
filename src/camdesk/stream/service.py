@@ -81,13 +81,19 @@ class StreamService(QObject):
         self._thread.start()
 
     def stop(self, timeout_s: float = 5.0) -> None:
-        """Stop and wait for the thread (bounded by the source's read timeout)."""
+        """Stop the stream thread.
+
+        timeout_s > 0 waits for it (app exit, tests). timeout_s = 0 returns at once — use this
+        on the UI thread; the thread notices the stop flag and ends by itself within the
+        source's read timeout.
+        """
         self._stop.set()
         self._wake.set()
         if self._thread is not None:
-            self._thread.join(timeout_s)
-            if self._thread.is_alive():
-                log.warning("Stream thread did not stop within %.1f s", timeout_s)
+            if timeout_s > 0:
+                self._thread.join(timeout_s)
+                if self._thread.is_alive():
+                    log.warning("Stream thread did not stop within %.1f s", timeout_s)
             self._thread = None
         self.buffer.clear()
         self._set_state(ConnectionState.IDLE, "")

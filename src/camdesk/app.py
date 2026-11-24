@@ -79,11 +79,10 @@ def run(argv: Sequence[str] | None = None) -> int:
     log.info("CamDesk %s starting (log: %s)", __version__, log_file)
 
     settings = settings_store.load()
+    camera = settings.last_camera
     if args.host:
         known = next((c for c in settings.cameras if c.host == args.host), None)
-        profile = known or CameraProfile(name=args.host, host=args.host, port=args.port)
-        settings.upsert_camera(profile)
-    camera = settings.last_camera
+        camera = known or CameraProfile(name=args.host, host=args.host, port=args.port)
 
     if not args.fake and camera is None:
         # The connect screen arrives in build step 6; until then the IP comes from --host.
@@ -96,8 +95,11 @@ def run(argv: Sequence[str] | None = None) -> int:
     from PySide6.QtWidgets import QApplication
 
     from camdesk.camera import endpoints as ep
+    from camdesk.camera.client import CameraClient
     from camdesk.config import paths
+    from camdesk.core.controller import AppController
     from camdesk.core.frames import LatestFrameBuffer
+    from camdesk.core.state import AppState
     from camdesk.stream.mjpeg_source import MjpegSource
     from camdesk.stream.rtsp_source import RtspSource
     from camdesk.stream.service import StreamService
@@ -110,37 +112,46 @@ def run(argv: Sequence[str] | None = None) -> int:
     app.setApplicationVersion(__version__)
     app.setWindowIcon(QIcon(str(paths.app_icon())))
 
-    buffer = LatestFrameBuffer()
+    buffer = LatestFrameBuffer()  # shared by every stream and the video widget
+    fake_camera = None
     if args.fake:
+        from camdesk.dev.fake_camera import FakeCamera
         from camdesk.dev.fake_video_source import FakeVideoPlan
 
+        fake_camera = FakeCamera().start()
         plan = FakeVideoPlan(width=1280, height=720)
-        factories = [plan.factory]
-        label = "Fake camera"
-    else:
-        assert camera is not None
-        host, port = camera.host, camera.port
-        factories = [
-            lambda: RtspSource(ep.rtsp_url(host, port)),
-            lambda: MjpegSource(ep.mjpeg_url(host, port)),
-        ]
-        label = f"{camera.name} · {camera.address}"
+        camera = CameraProfile(name="Fake camera", host=fake_camera.host, port=fake_camera.port)
 
-    stream = StreamService(buffer, factories)
-    window = PreviewWindow(buffer, label)
-    stream.frame_ready.connect(window.video.on_frame_ready)
-    stream.state_changed.connect(window.set_state)
-    stream.stream_info_changed.connect(window.set_stream_info)
+        def make_stream(profile: CameraProfile, password: str) -> StreamService:
+            return StreamService(buffer, [plan.factory])
+    else:
+
+        def make_stream(profile: CameraProfile, password: str) -> StreamService:
+            host, port, user = profile.host, profile.port, profile.username
+            return StreamService(
+                buffer,
+                [
+                    lambda: RtspSource(ep.rtsp_url(host, port, user, password)),
+                    lambda: MjpegSource(ep.mjpeg_url(host, port)),
+                ],
+            )
+
+    state = AppState()
+    client = CameraClient()
+    controller = AppController(state, settings, client, make_stream)
+    window = PreviewWindow(buffer, state, controller)
     window.show()
     if args.debug_overlay:
         window.debug.toggle()
-    stream.start()
+    assert camera is not None
+    controller.connect_camera(camera, remember=not args.fake)
     if args.quit_after:
         QTimer.singleShot(int(args.quit_after * 1000), app.quit)
 
     try:
         return app.exec()
     finally:
-        stream.stop()
-        settings_store.save(settings)
+        controller.shutdown()
+        if fake_camera is not None:
+            fake_camera.stop()
         log.info("CamDesk stopped")

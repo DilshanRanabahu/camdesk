@@ -4,7 +4,7 @@ A Windows desktop app to view, record and control an Android phone running the *
 
 Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [architecture.md](architecture.md)
 
-> **Progress (2026-11-23):** Version 1 build steps **1–4 of 10** done — live GPU video works with the real phone. Next: step 5 (AppState + AppController). `[x]` = done.
+> **Progress (2026-11-24):** Version 1 build steps **1–5 of 10** done — live GPU video works with the real phone, and every camera control works through AppController (temporary keys until the buttons in step 7). Next: step 6 (UI shell). `[x]` = done.
 
 ## Tech Stack
 
@@ -102,6 +102,8 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 | `T` | Flashlight |
 | `C` | Switch camera |
 | `+` / `-` | Zoom in / out |
+| `A` | Autofocus (temporary key until step 7) |
+| `N` | Night vision (temporary key until step 7) |
 | `Ctrl` + `D` | Debug overlay |
 | `V` | Cycle view mode: fit / fill / original |
 

@@ -2,9 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-23 (after build step 4)
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 5)
 
-Decisions 18–26 were made during development; each row says why.
+Decisions 18–28 were made during development; each row says why.
 
 ---
 
@@ -39,6 +39,8 @@ Decisions 18–26 were made during development; each row says why.
 | 20 | Qt package | **PySide6-Essentials** (not full `PySide6`) | Has everything CamDesk needs (Widgets, OpenGL, Test); skips WebEngine/3D/Multimedia add-ons — much smaller download and `.exe` |
 | 21 | Frame types location | `VideoFrame` + `LatestFrameBuffer` in `core/frames.py` (not `stream/`) | The UI's video widget reads frames, and the UI may only import `core/` |
 | 22 | Low-latency input | FFmpeg `fflags=nobuffer` for the camera | Lower delay; drops only the single frame read while probing at connect time |
+| 27 | Core-layer text | Toast text from the controller lives in `core/messages.py` | Rule 7 keeps UI text in `ui/strings.py`, but core may not import ui |
+| 28 | Cross-thread signal wiring | Worker signals connect to controller **methods**, never lambdas | A lambda runs on the emitting thread and would touch AppState off the UI thread |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -205,6 +207,19 @@ Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
 | Glass-to-glass (adds one display refresh) | **~240–250 ms** | ~200 ms ⚠️ |
 
 Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering). To try later: 1280×720 and/or lower quality on the phone.
+
+### AppController on the real phone (build step 5)
+15/15 checks passed, all settings restored afterwards.
+
+| Check | Result |
+|---|---|
+| Connect (stream + capabilities) | ✅ 2.8 s |
+| Flashlight on/off | ✅ confirmed by the phone |
+| Fast zoom drag to 2× (10 steps) | ✅ throttled; phone reports 1.99× (zoom steps) |
+| Switch to front camera | ✅ torch + autofocus reported unavailable; video keeps flowing (30 FPS) |
+| Flashlight on the front camera | ✅ warning toast, no command sent |
+| Night vision on/off | ✅ |
+| `disconnect()` | ✅ returns in 0.3 ms (never blocks the UI) |
 
 ### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).
