@@ -17,7 +17,7 @@ If a request conflicts with these docs, say so and ask before proceeding. If a d
 
 ## Current Status
 
-- Version 1 build steps **1–9 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 10, Nuitka build → `CamDesk.exe`.
+- **Version 1 complete** (all 10 build steps; see the [build order](docs/architecture.md#10-build-order-version-1)). Next work comes from Version 2 in [docs/feature.md](docs/feature.md).
 - `ui/main_window.py` is the real window: title bar, connect screen, video + control dock, side panel, status bar. Single-key shortcuts (and `Tab`, `Space`) are off on the connect screen.
 - User notifications: anything calls `state.notify(Toast(...))`; `ui/widgets/toast.py` shows them. `core/notices.py` turns state changes into toasts (Reconnected, low battery).
 - Capture lives in `core/capture_manager.py` (used by AppController as `controller.capture`) and `capture/` (recorder, snapshot, storage).
@@ -38,10 +38,11 @@ uv run python -m camdesk --host 192.168.8.105   # Set and remember the phone IP
 uv run python -m camdesk --fake  # Run with the fake camera (no phone needed)
 uv run python -m camdesk --debug --debug-overlay   # Verbose log + Ctrl+D panel shown
 uv run python -m camdesk --native-frame           # Standard Windows title bar instead of the custom one
+uv run python -m camdesk --fake --smoke-test      # Connect, snapshot, record 3 s, exit 0/1 (also works on CamDesk.exe)
+.\scripts\build.ps1 -Zip                         # Build dist\CamDesk\CamDesk.exe (+ zip); runs the smoke test
 uv run pytest                    # Run tests
 uv run ruff check .              # Lint
 uv run ruff format .             # Format
-.\scripts\build.ps1              # Build dist\CamDesk.exe (Nuitka)
 ```
 
 Always use `uv run` / `uv add` — never `pip install` and never activate a different Python.
@@ -95,6 +96,8 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - Optimistic UI + polling race: ignore status reports while commands are in flight (`AppController._in_flight`). A report taken before a command runs would undo the optimistic value and the next click builds on stale state.
 - Windows timers default to ~15.6 ms steps depending on other apps; CamDesk calls `timeBeginPeriod(1)` at startup. Use `Qt.TimerType.PreciseTimer` for anything frame-timed, and measure timing twice (it varies between runs).
 - In a method, `self._queue.append(self._compute())` binds the **old** deque if `_compute()` replaces `self._queue` — compute first, then append (real frame-loss bug in the playout buffer, caught by tests).
+- Nuitka: modules imported from compiled code (e.g. `av._cyutil`) are invisible to it — include the whole package (`--include-package=av`). Anything found by package metadata/entry points can vanish in the exe: choose it explicitly (keyring's Windows backend is set in `config/secrets.py`). The exe has no console: `sys.stderr` is `None`.
+- Windows PowerShell 5.1 + `$ErrorActionPreference = "Stop"` turns a native program's stderr into a terminating error — check `$LASTEXITCODE` instead (Nuitka writes progress to stderr).
 - `QScreen.grabWindow(0, x, y, …)` takes coordinates **relative to that screen**, not global ones (the second monitor is at negative x).
 
 ## Code Style

@@ -36,6 +36,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--native-frame", action="store_true", help="use the standard Windows title bar"
     )
     parser.add_argument("--quit-after", type=float, metavar="SECONDS", help=argparse.SUPPRESS)
+    parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -188,6 +189,11 @@ def run(argv: Sequence[str] | None = None) -> int:
         controller.connect_camera(camera, remember=not args.fake)
     if args.quit_after:
         QTimer.singleShot(int(args.quit_after * 1000), app.quit)
+    if args.smoke_test:
+        from camdesk.dev.smoke_test import SmokeTest
+
+        smoke = SmokeTest(app, controller)
+        smoke.start()
 
     try:
         return app.exec()

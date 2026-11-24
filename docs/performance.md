@@ -69,7 +69,18 @@ Network read timeout 3 s → 2 s (Wi-Fi gaps measured ≤ 0.27 s, so no false dr
 **noticed after 4.5 s instead of 6.5 s**; video back ~4–5 s after Wi-Fi returns. The rest is Windows keeping the TCP
 connection alive briefly — outside CamDesk.
 
-### 2.4 Earlier fixes found by measuring
+### 2.4 Startup (CamDesk.exe)
+Launch → first video frame, measured against the phone:
+
+| Run | Time |
+|---|---|
+| From source (`uv run python -m camdesk`) | 2.8–3.1 s |
+| `CamDesk.exe` (Nuitka standalone folder) | **2.1–2.2 s** |
+| `CamDesk.exe`, very first launch | ~5 s (one-time Windows Defender scan) |
+
+A one-file exe was not used: it unpacks itself to a temp folder on every launch (decision #51).
+
+### 2.5 Earlier fixes found by measuring
 - Repaint watchdog: a missed `update()` stalled the first frame for 3.4 s (step 4).
 - "No picture" watchdog: packets but no decodable frames right after IP Webcam starts (step 6).
 - Stale-status race undoing fast toggles (step 7).

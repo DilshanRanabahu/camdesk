@@ -4,7 +4,7 @@ A Windows desktop app to view, record and control an Android phone running the *
 
 Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [architecture.md](architecture.md)
 
-> **Progress (2026-11-24):** Version 1 build steps **1–9 of 10** done — everything in Version 1 works; only the `.exe` build (step 10) is left. `[x]` = done.
+> **Progress (2026-11-24):** ✅ **Version 1 complete** — all features below work, verified on the real phone, and ship as `CamDesk.exe`. Version 2 is next. `[x]` = done.
 
 ## Tech Stack
 
@@ -105,8 +105,9 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 | `+` / `-` | Zoom in / out |
 | `Tab` | Show / hide side panel |
 | Click picture | Focus on that spot |
-| `A` | Autofocus (temporary key until step 7) |
-| `N` | Night vision (temporary key until step 7) |
+| `A` | Autofocus |
+| `N` | Night vision |
+| `Ctrl` + `R` | Retry the connection |
 | `Ctrl` + `D` | Debug overlay |
 | `Ctrl` + `,` | Settings |
 | Mouse wheel | Zoom |

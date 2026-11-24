@@ -25,7 +25,10 @@ Rules for AI coding agents are in [../AGENTS.md](../AGENTS.md) at the project ro
 | 7. Controls (dock + side panel) | ✅ verified 19/19 on the phone |
 | 8. Snapshots + MKV recording | ✅ no extra CPU, 0 dropped packets |
 | 9. Polish (toasts, reconnect UI, shortcuts) | ✅ toasts, settings, notices |
-| 10. `CamDesk.exe` build | next |
+| 10. `CamDesk.exe` build | ✅ standalone folder, smoke-tested on the phone |
+
+**Version 1 is complete.** Next work comes from Version 2 in [feature.md](feature.md#version-2--smart-features).
+Build and run the exe: [README → Build CamDesk.exe](../README.md#build-camdeskexe).
 
 Measurements from the real phone are in [decisions.md § 5](decisions.md#5-verified-on-the-real-phone-2026-11-23).
 

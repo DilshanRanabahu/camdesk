@@ -2,9 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 9)
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (Version 1 complete, after build step 10)
 
-Decisions 18–50 were made during development; each row says why.
+Decisions 18–53 were made during development; each row says why.
 
 ---
 
@@ -63,6 +63,9 @@ Decisions 18–50 were made during development; each row says why.
 | 48 | Windows timer resolution | `timeBeginPeriod(1)` while running, released on exit | Default ~15.6 ms steps (set by other apps) made timers up to ~13 ms late in some runs |
 | 49 | Network read timeout | 2 s (was 3 s) | Wi-Fi drop noticed after 4.5 s instead of 6.5 s; measured Wi-Fi gaps ≤ 0.27 s, so no false drops |
 | 50 | Quality slider | Relabelled "MJPEG quality" with an honest tooltip | Measured: the H.264 stream (and recordings) stay ~16 Mbps at every quality and at 720p |
+| 51 | Exe layout | Nuitka **standalone folder**, not one-file | One-file unpacks to a temp folder on every launch (slower start, antivirus false positives); measured launch → first frame: 2.1 s exe vs 2.8 s from source |
+| 52 | Keyring backend | Set the Windows Credential Manager backend explicitly | keyring finds backends via package metadata, which a packaged exe can lose — passwords would silently not save |
+| 53 | Build verification | `--smoke-test` flag; `build.ps1` runs it on every build | Caught `av._cyutil` missing from the first exe; also used to verify the exe against the phone |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -76,7 +79,7 @@ Decisions 18–50 were made during development; each row says why.
 ### Release
 | # | Topic | Decision | Reason |
 |---|---|---|---|
-| 13 | Distribution | **Portable `.exe`** first; Inno Setup installer later | Fastest way to run it |
+| 13 | Distribution | **Portable folder** `dist\CamDesk\` with `CamDesk.exe` (zip to share); Inno Setup installer later | Fastest way to run it ✅ |
 | 14 | Icon / logo | ✅ Camera lens on a monitor with Wi-Fi arcs, dark rounded square, accent `#4C8DFF` (made with ChatGPT); plus a "Cam**Desk**" wordmark | Matches the UI theme; readable from 24 px up. Optional later: a lens-only variant for 16 px |
 | 15 | Auto-update | **Not needed** | Personal use |
 | 16 | License | Decide only if published (e.g. MIT); PySide6 is LGPL — fine for personal/free use | Not needed now |
@@ -280,6 +283,9 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
 - **Real Wi-Fi drop** (phone Wi-Fi turned off for 10 s over ADB, then on): **7/7 passed**. Drop noticed after 6.5 s
   (network timeouts), overlay "Reconnecting… (attempt 2, 3)" over the dimmed last frame, **video back 4.2 s after
   Wi-Fi returned**, "Reconnected" toast, 29 FPS again. Phone came back on the same IP.
+
+### CamDesk.exe on the real phone (build step 10)
+`CamDesk.exe --host 192.168.8.105 --smoke-test`: ✅ PASSED — D3D11VA (GPU) 1920×1080 at 30.8 FPS, snapshot 123 KB, 3 s recording 5.1 MB (H.264 + AAC, starts on a keyframe, 79/79 frames decode). Startup after the first launch: 2.1–2.2 s to first frame (first launch ~5 s while Windows Defender scans the new files).
 
 ### Open questions
 - **Latency:** ~240 ms camera → screen (Lowest latency), almost all on the phone/Wi-Fi side. CamDesk can't change IP Webcam's H.264 bitrate over the network.

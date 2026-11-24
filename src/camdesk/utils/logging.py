@@ -38,15 +38,18 @@ def setup_logging(debug: bool = False, log_dir: Path | None = None) -> Path:
         log_file, maxBytes=1_000_000, backupCount=5, encoding="utf-8"
     )
     file_handler.setFormatter(formatter)
-    console = logging.StreamHandler(sys.stderr)
-    console.setFormatter(formatter)
+    # The packaged .exe has no console (sys.stderr is None): log to the file only.
+    console = logging.StreamHandler(sys.stderr) if sys.stderr is not None else None
+    if console is not None:
+        console.setFormatter(formatter)
 
     root = logging.getLogger()
     for handler in list(root.handlers):
         root.removeHandler(handler)
         handler.close()
     root.addHandler(file_handler)
-    root.addHandler(console)
+    if console is not None:
+        root.addHandler(console)
     root.setLevel(logging.DEBUG if debug else logging.INFO)
     # Quiet noisy libraries
     logging.getLogger("httpx").setLevel(logging.WARNING)

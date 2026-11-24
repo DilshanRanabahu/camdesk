@@ -6,7 +6,7 @@ Related docs: [feature.md](feature.md) · [decisions.md](decisions.md) · [archi
 
 Language: **English only**. All user-facing text lives in one module (`ui/strings.py`) so wording stays consistent.
 
-> **Implementation status (step 7):** built — tokens, stylesheet, icons, custom title bar with camera pill and window buttons, connect screen (§6.1), connection states (§6.2), status bar, video area, `Ctrl+D` debug overlay, **control dock** (auto-hide fade), **side panel** (Camera / Image / View / Captures cards), toggle switch, labeled slider, disabled-control tooltips, tap-to-focus ring, **REC badge** and red record button (§6.3), **snapshot flash** (§6.4), **toasts** with thumbnail + Open (§7), **settings dialog**, scroll-to-zoom, failed-state hint. All of §5–§10 is built except the light theme (V3). Screenshots: [connect screen](assets/connect-screen.png) · [main window](assets/main-window.png).
+> **Implementation status (Version 1 complete):** built — tokens, stylesheet, icons, custom title bar with camera pill and window buttons, connect screen (§6.1), connection states (§6.2), status bar, video area, `Ctrl+D` debug overlay, **control dock** (auto-hide fade), **side panel** (Camera / Image / View / Captures cards), toggle switch, labeled slider, disabled-control tooltips, tap-to-focus ring, **REC badge** and red record button (§6.3), **snapshot flash** (§6.4), **toasts** with thumbnail + Open (§7), **settings dialog**, scroll-to-zoom, failed-state hint. All of §5–§10 is built except the light theme (V3). Screenshots: [connect screen](assets/connect-screen.png) · [main window](assets/main-window.png).
 
 ---
 
@@ -219,11 +219,14 @@ Animations never touch the video widget — only overlays — so playback stays 
 | `Esc` | Exit fullscreen |
 | `T` | Flashlight |
 | `N` | Night vision |
+| `A` | Autofocus |
 | `C` | Switch camera |
 | `+` / `-` / mouse wheel | Zoom |
 | `Tab` | Toggle side panel |
 | `Ctrl + ,` | Settings |
 | `Ctrl + D` | Debug overlay |
+| `Ctrl + R` | Retry the connection |
+| Click the picture | Focus on that spot |
 | `V` | Cycle view mode (fit / fill / original) |
 
 ---

@@ -4,7 +4,7 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
-> **Status:** build steps 1–9 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
+> **Status:** Version 1 complete — build steps 1–10 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
 
 ---
 
@@ -238,7 +238,8 @@ camara/
 │       │
 │       ├── dev/                  # ✅ Run and test without the phone (`--fake`)
 │       │   ├── fake_camera.py        # ✅ Fake IP Webcam HTTP API, mirrors the real phone's quirks
-│       │   └── fake_video_source.py  # ✅ Color bars + moving bar; can simulate failed opens / drops
+│       │   ├── fake_video_source.py  # ✅ Color bars + moving bar; can simulate failed opens / drops
+│       │   └── smoke_test.py         # ✅ --smoke-test: connect, snapshot, record 3 s, exit 0/1
 │       │
 │       ├── ui/
 │       │   ├── settings_dialog.py # ✅ Ctrl+,: capture folders, recording part length, shortcut list
@@ -305,7 +306,8 @@ camara/
 └── scripts/
     ├── run.ps1                   # ✅ Run in dev mode (passes args through)
     ├── make_icons.py             # ✅ Builds icon.png, app.ico, wordmark.png from source images
-    └── build.ps1                 # Nuitka → dist\CamDesk.exe — step 10
+    ├── camdesk_entry.py          # ✅ Entry point Nuitka compiles
+    └── build.ps1                 # ✅ Nuitka → dist\CamDesk\CamDesk.exe (+ -Zip), then smoke test
 ```
 
 ---
@@ -333,7 +335,7 @@ camara/
 | `keyring` | Secure password storage |
 | `opencv-python-headless` | Motion detection (V2) — not added yet |
 | Dev: `pytest`, `ruff` | Tests, lint |
-| Dev: `nuitka` | Build the .exe — added in step 10 |
+| Dev: `nuitka` | Build the .exe (uses MSVC from Visual Studio Build Tools) |
 
 Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed so every build uses the same versions.
 
@@ -373,4 +375,4 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 7. ✅ Control dock + side panel → camera controls working (verified 19/19 on the phone)
 8. ✅ `capture/` — snapshot + MKV recording with 30-min segments (verified on the phone, no extra CPU)
 9. ✅ Toasts, reconnect notices + hints, settings dialog, view-mode memory, wheel zoom, crash notice
-10. Nuitka build → `CamDesk.exe`
+10. ✅ Nuitka build → `dist\CamDesk\CamDesk.exe` (standalone folder, ~200 MB; smoke-tested against the phone)
