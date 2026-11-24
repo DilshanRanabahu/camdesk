@@ -71,8 +71,9 @@ The stream thread reads **compressed H.264 video and AAC audio packets** from th
                                           └──▶ D3D11VA decode (GPU)
                                                    │ NV12 frame (zero-copy NumPy views)
                                                    ▼
-                                          LatestFrameBuffer  (size 1, overwrite)
-                                                   │ "frame_ready" signal (coalesced)
+                                          PlayoutBuffer  (Smooth: scheduled on the phone's clock;
+                                                   │        Lowest latency: newest frame only)
+                                                   │ "frame_ready" signal (coalesced) + due-time timer
                                                    ▼
                                     VideoWidget (QOpenGLWidget, UI thread)
                                       upload planes as textures (row padding skipped)
@@ -83,7 +84,7 @@ The stream thread reads **compressed H.264 video and AAC audio packets** from th
 ```
 
 **Optimizations**
-1. **LatestFrameBuffer** — holds only the newest frame. If the UI is busy, old frames are dropped, so latency never grows.
+1. **PlayoutBuffer** (`core/playout.py`) — Smooth mode shows each frame at its phone-clock time + an adaptive delay (evens out Wi-Fi bursts; see [performance.md](performance.md)); Lowest-latency mode keeps only the newest frame. Either way the queue is bounded, so latency can't grow.
 2. **Coalesced repaint** — the stream thread emits `frame_ready` only if the previous frame was already drawn; never floods the event queue.
 3. **NV12 → RGB in a shader** — skips CPU color conversion (the biggest CPU cost in most Python video apps).
 4. **Low-latency FFmpeg options** — `rtsp_transport=tcp`, `fflags=nobuffer`, `flags=low_delay`, small probe size.
@@ -197,6 +198,7 @@ camara/
 │       ├── core/                 # Plain Python — no Qt widgets, no network
 │       │   ├── models.py         # ✅ Dataclasses: CameraProfile, StreamInfo, CameraStatus, DeviceInfo…
 │       │   ├── frames.py         # ✅ VideoFrame + LatestFrameBuffer (in core so the UI may read frames)
+│       │   ├── playout.py        # ✅ PlayoutBuffer: smooth playback on the phone's clock (default)
 │       │   ├── state.py          # ✅ AppState (QObject + signals, emit-on-change)
 │       │   ├── controller.py     # ✅ AppController — every user action, optimistic + throttled
 │       │   ├── messages.py       # ✅ User-facing text produced by core (toasts, validation)
@@ -285,6 +287,7 @@ camara/
 │   ├── test_capabilities.py      # ✅ Includes trimmed real replies from the phone
 │   ├── test_camera_client.py     # ✅ Sync API + threaded client against the fake camera
 │   ├── test_frame_buffer.py      # ✅
+│   ├── test_playout.py           # ✅ Bursty arrival → even display, adaptivity, resets, wake-up contract
 │   ├── test_timing.py            # ✅
 │   ├── test_stream_service.py    # ✅ Reconnect, backoff, FAILED/retry, fallback, coalescing
 │   ├── test_rtsp_source.py       # ✅ PyAV source on a generated MKV file

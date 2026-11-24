@@ -39,7 +39,8 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 - [x] 6. Fullscreen mode (double-click or F11)
 - [x] 7. View modes: fit / fill / original size (`V` key + View card in the side panel)
 - [x] 8. On-screen FPS, resolution and decoder (status bar; full numbers incl. frame age in the `Ctrl+D` overlay)
-- [x] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use
+- [x] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use, playback buffer delay
+- [x] 8b. **Smooth playback** (default) — evens out Wi-Fi bursts; "Lowest latency" option in Settings
 
 ### Capture
 - [x] 9. Snapshot (button or Space), saved with timestamp (flash + "Open" link)
@@ -52,7 +53,7 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 - [x] 13. Switch front/back camera
 - [x] 14. Zoom slider, **1× – 10×** (digital zoom)
 - [x] 15. Tap-to-focus — **back camera only** (front is fixed focus; disabled). Click the picture; focus ring shows where
-- [x] 16. Resolution and quality settings (stream recovers by itself after a change)
+- [x] 16. Resolution and quality settings (resolution changes are seamless; "quality" only affects the MJPEG backup — the H.264 bitrate is fixed by IP Webcam)
 - [x] 17. Night vision on/off
 - [x] 18. Rotate / flip image — done on the phone, so recordings are rotated too
 

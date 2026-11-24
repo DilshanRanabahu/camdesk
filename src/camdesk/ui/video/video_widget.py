@@ -45,6 +45,7 @@ GL_COLOR_BUFFER_BIT = 0x4000
 GL_TRIANGLE_STRIP = 0x0005
 
 WATCHDOG_MS = 100
+MIN_REFRESH_S = 0.004  # cap the repaint loop if vsync is off (≤ 250 Hz)
 
 
 def _qmatrix(column_major: tuple[float, ...]) -> QMatrix3x3:
@@ -96,6 +97,14 @@ class VideoWidget(QOpenGLWidget):
         self._click_timer = QTimer(self)
         self._click_timer.setSingleShot(True)
         self._click_timer.timeout.connect(self._emit_single_click)
+        # Smooth playback: while frames wait for their time, repaint at every display refresh
+        # so each one appears on its scheduled vsync (PlayoutBuffer decides which is due).
+        self._last_swap = 0.0
+        self.frameSwapped.connect(self._after_swap)
+        self._due_timer = QTimer(self)
+        self._due_timer.setSingleShot(True)
+        self._due_timer.setTimerType(Qt.TimerType.PreciseTimer)  # Windows default is ~15 ms steps
+        self._due_timer.timeout.connect(self.update)
 
     # -- public ------------------------------------------------------------
 
@@ -116,6 +125,25 @@ class VideoWidget(QOpenGLWidget):
     @property
     def has_frame(self) -> bool:
         return self._frame_info is not None
+
+    def _after_swap(self) -> None:
+        """Smooth playback: paint again exactly when the next frame is due.
+
+        Repainting at every display refresh worked, but each swap waits for vsync on the UI
+        thread, so 60 waits/s made the event loop ~12 ms late on average. Waking only at the
+        next frame's time (≈30/s) halves that and lands each frame on its own refresh.
+        """
+        due = getattr(self.buffer, "next_due", None)
+        if due is None:
+            return  # nothing waiting: the next frame_ready wakes us up
+        now = time.perf_counter()
+        wait_ms = (due - now) * 1000
+        too_fast = now - self._last_swap < MIN_REFRESH_S  # driver ignoring vsync?
+        self._last_swap = now
+        if wait_ms <= 1 and not too_fast:
+            self.update()
+        else:
+            self._due_timer.start(max(1, round(wait_ms), round(MIN_REFRESH_S * 1000)))
 
     def _check_stalled(self) -> None:
         if self.buffer.has_new:

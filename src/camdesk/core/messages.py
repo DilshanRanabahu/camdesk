@@ -27,7 +27,7 @@ RECORDING_NEEDS_MAIN_STREAM = (
     "Recording needs the main video stream (not available on the backup stream)"
 )
 RECORDING_NOT_CONNECTED = "Connect to a camera to record"
-LOW_DISK_WARNING = "Only {gb:.1f} GB free — recording uses about 7 GB per hour at high quality"
+LOW_DISK_WARNING = "Only {gb:.1f} GB free — recording uses about 7 GB per hour"
 DISK_FULL = "Not enough disk space to record ({gb:.1f} GB free)"
 
 # Address validation (connect screen)

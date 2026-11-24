@@ -8,6 +8,7 @@ Planning and design documents for CamDesk, a Windows desktop app that views, rec
 | [feature.md](feature.md) | Feature list for V1, V2 and V3, with checkboxes, shortcuts and IP Webcam endpoints |
 | [ui-design.md](ui-design.md) | Dark UI design: colors, fonts, layout, screens, components, animations, shortcuts |
 | [architecture.md](architecture.md) | Layers, threads, video pipeline, folder structure, dependencies, build order |
+| [performance.md](performance.md) | Profiling results, smooth playback, what was optimized and why |
 
 Rules for AI coding agents are in [../AGENTS.md](../AGENTS.md) at the project root.
 

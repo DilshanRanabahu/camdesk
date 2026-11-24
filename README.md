@@ -32,9 +32,9 @@ A smooth, modern Windows desktop app to view, record and control an Android phon
 
 - **Smooth, low-CPU video:** H.264 decoded on the GPU (D3D11VA) and converted to RGB in an OpenGL shader.
   Measured on a Galaxy A06 → MX230 laptop: **1080p @ 30 FPS, ~2% CPU, 0 dropped frames**.
-- **Never lags behind:** only the newest frame is kept, so delay can't build up.
+- **Smooth playback:** frames are shown on the phone's own clock, so Wi-Fi hiccups don't show as stutter (stutters > 100 ms: 7 → 0 per 30 s; see [performance](docs/performance.md)). A "Lowest latency" mode is one click away in Settings.
 - **Self-healing connection:** automatic reconnect with backoff, plus an MJPEG fallback stream.
-- **Recording without re-encoding:** H.264 + AAC saved straight to crash-safe MKV, split every 30 minutes — measured on the phone: **no extra CPU** while recording, 0 dropped packets.
+- **Recording without re-encoding:** H.264 + AAC saved straight to crash-safe MKV, split every 30 minutes — measured on the phone: **no extra CPU** while recording, 0 dropped packets (~7 GB per hour at IP Webcam's fixed ~16 Mbps).
 - **Private:** no telemetry; talks only to your phone on the local network. Passwords live in Windows Credential Manager.
 
 ## Requirements
@@ -79,7 +79,7 @@ Recommended phone settings (resolution, Samsung battery settings, static IP): [d
 ## Development
 
 ```powershell
-uv run pytest            # 213 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
+uv run pytest            # 221 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
 uv run ruff check .      # lint
 uv run ruff format .     # format
 ```

@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from camdesk.config.settings import Settings
+from camdesk.config.settings import PLAYBACK_LOW_LATENCY, Settings
 from camdesk.core.controller import AppController
 from camdesk.core.frames import LatestFrameBuffer
 from camdesk.core.models import (
@@ -362,6 +362,10 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             dialog.apply()
             self.controller.save_settings()
+            if hasattr(self.video.buffer, "set_smooth"):
+                self.video.buffer.set_smooth(
+                    self.controller.settings.playback != PLAYBACK_LOW_LATENCY
+                )
             self.status_bar.set_captures_dir(self.controller.settings.recordings_path())
 
     # -- window frame & geometry ----------------------------------------------

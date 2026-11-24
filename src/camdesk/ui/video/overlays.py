@@ -53,6 +53,12 @@ class DebugOverlay(QLabel):
         self._timer.timeout.connect(self.refresh)
         self.hide()
 
+    def _buffer_line(self) -> str:
+        delay = getattr(self._buffer, "delay_s", None)
+        if delay is None or not getattr(self._buffer, "smooth", False):
+            return f"{strings.DEBUG_BUFFER:<10}{strings.DEBUG_LOW_LATENCY}"
+        return f"{strings.DEBUG_BUFFER:<10}{delay * 1000:4.0f} ms ({strings.DEBUG_SMOOTH})"
+
     def toggle(self) -> None:
         self.setVisible(not self.isVisible())
         if self.isVisible():
@@ -89,6 +95,7 @@ class DebugOverlay(QLabel):
             if age is not None
             else f"{strings.DEBUG_FRAME_AGE:<10}{none}",
             f"{strings.DEBUG_DROPPED:<10}{self._buffer.dropped}",
+            self._buffer_line(),
             f"{strings.DEBUG_CPU:<10}{whole:4.1f}%  ({one_core:.0f}% of 1 core)",
             "",
             f"{strings.DEBUG_CAMERA:<10}"

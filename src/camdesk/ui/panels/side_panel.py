@@ -96,6 +96,7 @@ class SidePanel(QScrollArea):
         )
         # Commit on release only: each change restarts the phone's encoder.
         self.quality.value_committed.connect(self._c.set_quality)
+        self.quality.setToolTip(strings.TIP_QUALITY)
         card.add(self.quality)
 
         self.resolution = QComboBox()

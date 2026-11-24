@@ -61,7 +61,7 @@ uv was installed with winget; a terminal opened before that may not have it on `
 ## Performance Rules (the main goal)
 
 - **Never block the UI thread.** No network calls, decoding, file writes, `time.sleep()` or waits on the main thread.
-- Video frames go through **`LatestFrameBuffer`** (size 1, overwrite). Never queue frames for display.
+- Video frames go through the **`PlayoutBuffer`** (`core/playout.py`): Smooth mode schedules frames on the phone's clock; Lowest-latency mode keeps only the newest. Never add another frame queue for display. Measure before/after any change that could affect smoothness — method and baselines in [docs/performance.md](docs/performance.md).
 - Decoding uses hardware (D3D11VA → DXVA2 → software fallback). Do not convert frames to RGB on the CPU for display; the NV12 shader does it.
 - **Recording remuxes packets** (H.264 + AAC audio → MKV). Never decode/re-encode to record.
 - Animations only on overlay widgets — never on or over the `QOpenGLWidget` paint.
@@ -93,6 +93,8 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - Widgets sized from a stylesheet must be **polished before measuring** (`ensurePolished()` + `adjustSize()`), or they come out squashed (toasts did).
 - Never import a function named `test_*` into a test module — pytest collects it (alias it).
 - Optimistic UI + polling race: ignore status reports while commands are in flight (`AppController._in_flight`). A report taken before a command runs would undo the optimistic value and the next click builds on stale state.
+- Windows timers default to ~15.6 ms steps depending on other apps; CamDesk calls `timeBeginPeriod(1)` at startup. Use `Qt.TimerType.PreciseTimer` for anything frame-timed, and measure timing twice (it varies between runs).
+- In a method, `self._queue.append(self._compute())` binds the **old** deque if `_compute()` replaces `self._queue` — compute first, then append (real frame-loss bug in the playout buffer, caught by tests).
 - `QScreen.grabWindow(0, x, y, …)` takes coordinates **relative to that screen**, not global ones (the second monitor is at negative x).
 
 ## Code Style

@@ -15,6 +15,7 @@ from types import TracebackType
 
 from camdesk import __version__
 from camdesk.config import settings as settings_store
+from camdesk.config.settings import PLAYBACK_LOW_LATENCY
 from camdesk.core.models import DEFAULT_PORT, CameraProfile
 from camdesk.utils.logging import setup_logging
 
@@ -68,6 +69,24 @@ def _set_default_gl_format() -> None:
     QSurfaceFormat.setDefaultFormat(fmt)
 
 
+def _precise_timers(enable: bool) -> None:
+    """Ask Windows for 1 ms timer resolution while CamDesk runs (what browsers and players do).
+
+    Measured: with Windows' default ~15.6 ms steps (which depend on *other* running apps),
+    the Smooth-playback timer and the UI event loop were up to ~13 ms late; with 1 ms they
+    stay under 1 ms and frame timing variation dropped from ~7 ms to ~4–6 ms.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        winmm = ctypes.windll.winmm
+        (winmm.timeBeginPeriod if enable else winmm.timeEndPeriod)(1)
+    except (AttributeError, OSError):
+        log.debug("Could not change the timer resolution", exc_info=True)
+
+
 def _set_windows_app_id() -> None:
     """Give CamDesk its own taskbar identity, so Windows shows our icon instead of Python's."""
     if sys.platform != "win32":
@@ -101,8 +120,8 @@ def run(argv: Sequence[str] | None = None) -> int:
     from camdesk.config import paths
     from camdesk.core import messages
     from camdesk.core.controller import AppController
-    from camdesk.core.frames import LatestFrameBuffer
     from camdesk.core.models import Toast, ToastLevel
+    from camdesk.core.playout import PlayoutBuffer
     from camdesk.core.state import AppState
     from camdesk.stream.mjpeg_source import MjpegSource
     from camdesk.stream.rtsp_source import RtspSource
@@ -112,6 +131,7 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     _set_default_gl_format()
     _set_windows_app_id()
+    _precise_timers(True)
     app = QApplication(sys.argv[:1])
     app.setApplicationName("CamDesk")
     app.setApplicationVersion(__version__)
@@ -119,7 +139,8 @@ def run(argv: Sequence[str] | None = None) -> int:
     app.setWindowIcon(app_icon)
     stylesheet.apply(app)
 
-    buffer = LatestFrameBuffer()  # shared by every stream and the video widget
+    # Shared by every stream and the video widget. Smooth = frames shown on the phone's clock.
+    buffer = PlayoutBuffer(smooth=settings.playback != PLAYBACK_LOW_LATENCY)
     fake_camera = None
     if args.fake:
         from camdesk.dev.fake_camera import FakeCamera
@@ -172,6 +193,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         return app.exec()
     finally:
         controller.shutdown()
+        _precise_timers(False)
         if fake_camera is not None:
             fake_camera.stop()
         log.info("CamDesk stopped")

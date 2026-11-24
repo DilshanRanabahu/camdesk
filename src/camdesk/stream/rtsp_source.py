@@ -19,7 +19,7 @@ from camdesk.utils.logging import redact
 log = logging.getLogger(__name__)
 
 OPEN_TIMEOUT_S = 6.0
-READ_TIMEOUT_S = 3.0  # also bounds how long stop() can take
+READ_TIMEOUT_S = 2.0  # no data this long = dropped (Wi-Fi gaps measured ≤ 0.27 s); bounds stop()
 
 # "nobuffer" skips FFmpeg's input buffering (lower delay) but drops the one frame read while
 # probing the stream — fine for live video, so it's on for the camera and off for files.

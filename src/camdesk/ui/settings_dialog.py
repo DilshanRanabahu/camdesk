@@ -6,6 +6,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QFileDialog,
     QGridLayout,
@@ -18,7 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from camdesk.config.settings import Settings
+from camdesk.config.settings import PLAYBACK_LOW_LATENCY, PLAYBACK_SMOOTH, Settings
 from camdesk.ui import strings
 from camdesk.ui.theme import tokens
 from camdesk.ui.widgets.card import Card
@@ -100,6 +101,18 @@ class SettingsDialog(QDialog):
         captures.add(part_row)
         layout.addWidget(captures)
 
+        playback = Card(strings.SETTINGS_PLAYBACK)
+        self.playback = QComboBox()
+        self.playback.addItem(strings.PLAYBACK_SMOOTH, PLAYBACK_SMOOTH)
+        self.playback.addItem(strings.PLAYBACK_LOW_LATENCY, PLAYBACK_LOW_LATENCY)
+        self.playback.setCurrentIndex(0 if settings.playback != PLAYBACK_LOW_LATENCY else 1)
+        playback.add(self.playback)
+        hint = QLabel(strings.PLAYBACK_HINT)
+        hint.setProperty("role", "caption")
+        hint.setWordWrap(True)
+        playback.add(hint)
+        layout.addWidget(playback)
+
         shortcuts = Card(strings.SETTINGS_SHORTCUTS)
         grid_widget = QWidget()
         grid = QGridLayout(grid_widget)
@@ -137,3 +150,4 @@ class SettingsDialog(QDialog):
         s.snapshots_dir = None if snaps == self._defaults[0] else str(snaps)
         s.recordings_dir = None if recs == self._defaults[1] else str(recs)
         s.segment_minutes = self.part_minutes.value()
+        s.playback = self.playback.currentData()

@@ -4,7 +4,7 @@ Final decisions for the project. Anything not listed here follows [architecture.
 
 **Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 9)
 
-Decisions 18–46 were made during development; each row says why.
+Decisions 18–50 were made during development; each row says why.
 
 ---
 
@@ -50,7 +50,7 @@ Decisions 18–46 were made during development; each row says why.
 | 35 | Maximized detection in the frame code | Ask Windows (`IsZoomed`), not Qt | Fullscreen → maximized: Qt still reported fullscreen, so ~7 px were cut off at every edge |
 | 36 | Rotate / mirror on the phone | `orientation` and `mirror_flip` settings, not a shader | Verified: the phone re-encodes (portrait → 1080×1920), so **recordings come out rotated too**, at no PC cost |
 | 37 | Tap-to-focus | Click → `focus_region` "X,Y" (-1000…1000, mapped through orientation/mirror) then `/focus`; single click waits out the double-click interval | Verified: `focus_region` only accepts a comma; double-click stays fullscreen |
-| 38 | Quality slider | Sent on release, not while dragging | Each change restarts the phone's encoder |
+| 38 | Quality slider | Sent on release, not while dragging | Each change restarts the phone's encoder. *Note (decision #50): it only affects MJPEG* |
 | 39 | Stale status vs optimistic UI | Ignore status reports while commands are in flight | Found on the phone: fast Mirror + Flip clicks left mirror on |
 | 40 | Snapshot source | The decoded frame on screen → JPEG with FFmpeg's mjpeg encoder (not `/shot.jpg`) | Instant, no network round-trip, already rotated/mirrored like the view; no Pillow dependency |
 | 41 | Recorder design | Stream thread copies packets into a bounded queue; writer thread remuxes. Each file starts on a keyframe; one shared time origin for video + audio | The original packet is still being decoded; shared origin keeps A/V in sync (verified: ends within 0.1 s) |
@@ -59,6 +59,10 @@ Decisions 18–46 were made during development; each row says why.
 | 44 | Notifications | One path: `state.notify(Toast)` → bottom-center toast stack (above the dock); errors stay 6 s, same text restarts instead of stacking | Consistent feedback; never covers the controls |
 | 45 | "Reconnected" toast | Only after a drop that followed real video | First-connect retries aren't a "reconnect" |
 | 46 | Settings dialog | Folders stored as `None` when left at the default | Defaults keep following `Videos\CamDesk` |
+| 47 | Smooth playback (default) | `PlayoutBuffer`: show frames on the phone's clock + adaptive delay (p95 lateness, ≤150 ms); paint at each frame's due time | Profiling: phone capture is perfectly even, Wi-Fi arrival is bursty. Stutters > 100 ms: 7 → 0 per 30 s, for ~57 ms extra delay. "Lowest latency" in Settings keeps show-on-arrival. See [performance.md](performance.md) |
+| 48 | Windows timer resolution | `timeBeginPeriod(1)` while running, released on exit | Default ~15.6 ms steps (set by other apps) made timers up to ~13 ms late in some runs |
+| 49 | Network read timeout | 2 s (was 3 s) | Wi-Fi drop noticed after 4.5 s instead of 6.5 s; measured Wi-Fi gaps ≤ 0.27 s, so no false drops |
+| 50 | Quality slider | Relabelled "MJPEG quality" with an honest tooltip | Measured: the H.264 stream (and recordings) stay ~16 Mbps at every quality and at 720p |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -224,7 +228,7 @@ Tested CamDesk's camera client against IP Webcam 1.19 at `192.168.8.105:8080`.
 | Camera → frame decoded on PC (screen-flash test) | **~225 ms** (216–270) | ~200 ms ⚠️ |
 | Glass-to-glass (adds one display refresh) | **~240–250 ms** | ~200 ms ⚠️ |
 
-Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering). To try later: 1280×720 and/or lower quality on the phone.
+Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering). *Later finding:* 720p and lower quality don't change the H.264 bitrate or Wi-Fi jitter (see [performance.md](performance.md)).
 
 ### AppController on the real phone (build step 5)
 15/15 checks passed, all settings restored afterwards.
@@ -278,8 +282,8 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
   Wi-Fi returned**, "Reconnected" toast, 29 FPS again. Phone came back on the same IP.
 
 ### Open questions
-- **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).
-- **Disk use:** 16 Mbps ≈ 7 GB per hour of recording. Playback is smooth at this bitrate (step 4), but lower quality may be worth it before recording lands (step 8).
+- **Latency:** ~240 ms camera → screen (Lowest latency), almost all on the phone/Wi-Fi side. CamDesk can't change IP Webcam's H.264 bitrate over the network.
+- **Disk use:** 16 Mbps ≈ 7 GB per hour of recording — fixed by IP Webcam, **not** by the quality slider (measured, decision #50).
 
 ## 6. Future Idea (not in V1)
 

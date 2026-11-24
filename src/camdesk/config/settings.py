@@ -20,6 +20,8 @@ from camdesk.core.models import DEFAULT_PORT, CameraProfile
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
+PLAYBACK_SMOOTH = "smooth"
+PLAYBACK_LOW_LATENCY = "low_latency"
 
 
 @dataclass(slots=True)
@@ -41,6 +43,7 @@ class Settings:
     recordings_dir: str | None = None
     segment_minutes: int = 30
     view_mode: str = "fit"  # fit | fill | original
+    playback: str = PLAYBACK_SMOOTH  # smooth (steady motion) | low_latency (show at arrival)
     window: WindowState = field(default_factory=WindowState)
 
     # -- helpers ---------------------------------------------------------
