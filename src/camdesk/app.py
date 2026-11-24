@@ -10,7 +10,7 @@ import argparse
 import logging
 import sys
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from types import TracebackType
 
 from camdesk import __version__
@@ -19,6 +19,9 @@ from camdesk.core.models import DEFAULT_PORT, CameraProfile
 from camdesk.utils.logging import setup_logging
 
 log = logging.getLogger(__name__)
+
+# Set once the UI exists: shows "Something went wrong" for unexpected exceptions.
+_on_unexpected_error: Callable[[], None] | None = None
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -43,6 +46,8 @@ def _install_excepthooks() -> None:
             sys.__excepthook__(exc_type, exc, tb)
             return
         log.critical("Unhandled exception", exc_info=(exc_type, exc, tb))
+        if _on_unexpected_error is not None:
+            _on_unexpected_error()  # safe from any thread: it emits a Qt signal
 
     def handle_thread(args: threading.ExceptHookArgs) -> None:
         if args.exc_value is not None:
@@ -94,8 +99,10 @@ def run(argv: Sequence[str] | None = None) -> int:
     from camdesk.camera import endpoints as ep
     from camdesk.camera.client import CameraClient
     from camdesk.config import paths
+    from camdesk.core import messages
     from camdesk.core.controller import AppController
     from camdesk.core.frames import LatestFrameBuffer
+    from camdesk.core.models import Toast, ToastLevel
     from camdesk.core.state import AppState
     from camdesk.stream.mjpeg_source import MjpegSource
     from camdesk.stream.rtsp_source import RtspSource
@@ -148,6 +155,12 @@ def run(argv: Sequence[str] | None = None) -> int:
         custom_frame=not args.native_frame,
     )
     window.show_restored()
+
+    def notify_unexpected() -> None:
+        state.notify(Toast(messages.UNEXPECTED_ERROR, ToastLevel.ERROR, action_path=str(log_file)))
+
+    global _on_unexpected_error
+    _on_unexpected_error = notify_unexpected
     if args.debug_overlay:
         window.debug.toggle()
     if camera is not None:  # otherwise the connect screen is shown

@@ -12,6 +12,11 @@ CONNECTED = "Connected to {camera}"
 NOT_AVAILABLE = "{label} is not available on this camera"
 SETTINGS_SAVE_FAILED = "Couldn't save settings: {reason}"
 
+# Connection & device
+RECONNECTED = "Reconnected"
+BATTERY_LOW = "Phone battery low ({percent:.0f}%) — plug it in to keep streaming"
+UNEXPECTED_ERROR = "Something went wrong — details are in the log"
+
 # Snapshots & recording
 SNAPSHOT_SAVED = "Snapshot saved · {name}"
 SNAPSHOT_FAILED = "Snapshot failed: {reason}"

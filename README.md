@@ -17,8 +17,8 @@
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
-> **Status: in development.** Version 1, build steps **1–8 of 10** done: dark UI, live GPU-decoded video, every camera
-> control, snapshots and MKV recording. Polish (toasts, settings) and the `.exe` build are next. See [progress](docs/README.md#project-status).
+> **Status: in development.** Version 1, build steps **1–9 of 10** done: dark UI, live GPU-decoded video, every camera
+> control, snapshots, MKV recording, notifications and settings. Only the `.exe` build is left. See [progress](docs/README.md#project-status).
 
 <p align="center">
   <img src="docs/assets/connect-screen.png" alt="CamDesk connect screen: IP address, port, login and recent cameras" width="800">
@@ -68,8 +68,9 @@ If the custom title bar ever misbehaves, `--native-frame` uses the standard Wind
 | `Tab` | Show / hide the side panel |
 | `T` / `C` / `N` / `A` | Flashlight / switch camera / night vision / focus |
 | Click the picture | Focus on that spot |
-| `+` / `-` | Zoom in / out |
+| `+` / `-` / mouse wheel | Zoom in / out |
 | `Ctrl+R` | Retry the connection |
+| `Ctrl+,` | Settings (capture folders, recording part length, all shortcuts) |
 
 **Picture sideways or upside down?** Use **Rotate** in the side panel. It rotates on the phone, so recordings come out right too.
 
@@ -78,7 +79,7 @@ Recommended phone settings (resolution, Samsung battery settings, static IP): [d
 ## Development
 
 ```powershell
-uv run pytest            # 201 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
+uv run pytest            # 213 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
 uv run ruff check .      # lint
 uv run ruff format .     # format
 ```

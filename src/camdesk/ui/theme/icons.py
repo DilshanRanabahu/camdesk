@@ -42,6 +42,10 @@ ICONS = {
     "mirror": '<path d="M12 3v18"/><path d="M8.5 7.5 4 12l4.5 4.5zM15.5 7.5 20 12l-4.5 4.5z"/>',
     "flip": '<path d="M3 12h18"/><path d="M7.5 8.5 12 4l4.5 4.5zM7.5 15.5 12 20l4.5-4.5z"/>',
     "sidebar": '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M15 5v14"/>',
+    "check-circle": '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+    "alert-triangle": '<path d="M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0zM12 9.5v4M12 17h.01"/>',  # noqa: E501
+    "alert-circle": '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.5h.01"/>',
+    "settings": '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',  # noqa: E501
 }
 
 

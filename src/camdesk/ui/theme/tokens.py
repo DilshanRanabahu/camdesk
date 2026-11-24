@@ -65,6 +65,9 @@ DOCK_AUTO_HIDE_MS = 3000
 FOCUS_RING = 56
 FOCUS_RING_MS = 600
 FLASH_MS = 80
+TOAST_THUMB_HEIGHT = 48
+TOAST_MAX_TEXT_WIDTH = 360
+SETTINGS_DIALOG_WIDTH = 520
 FLASH_OPACITY = 0.3
 
 # -- motion (ms) -------------------------------------------------------------

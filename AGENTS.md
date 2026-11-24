@@ -17,8 +17,9 @@ If a request conflicts with these docs, say so and ask before proceeding. If a d
 
 ## Current Status
 
-- Version 1 build steps **1–8 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 9, polish (toasts, reconnect UI, settings).
+- Version 1 build steps **1–9 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 10, Nuitka build → `CamDesk.exe`.
 - `ui/main_window.py` is the real window: title bar, connect screen, video + control dock, side panel, status bar. Single-key shortcuts (and `Tab`, `Space`) are off on the connect screen.
+- User notifications: anything calls `state.notify(Toast(...))`; `ui/widgets/toast.py` shows them. `core/notices.py` turns state changes into toasts (Reconnected, low battery).
 - Capture lives in `core/capture_manager.py` (used by AppController as `controller.capture`) and `capture/` (recorder, snapshot, storage).
 - Repo: https://github.com/DilshanRanabahu/camdesk (public, branch `main`).
 
@@ -88,6 +89,8 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - Recorder packet sinks run **on the stream thread**: copy the packet (`bytes(packet)` + timing) and enqueue; never keep or mutate the original — it is still being decoded.
 - PyAV: `CodecContext.time_base` needs a `Fraction` (not `"1/30"`); `reformat(src_color_range=…)` takes `ColorRange.MPEG/JPEG`.
 - Test media must be **paced and looped** to behave like a camera (`PacedFile` in `tests/test_capture.py`); a raw file ends in milliseconds.
+- Keep a reference to every QObject you create without a parent (e.g. `notices = Notices(state)`): an unreferenced one is garbage-collected and its signal connections silently vanish.
+- Widgets sized from a stylesheet must be **polished before measuring** (`ensurePolished()` + `adjustSize()`), or they come out squashed (toasts did).
 - Never import a function named `test_*` into a test module — pytest collects it (alias it).
 - Optimistic UI + polling race: ignore status reports while commands are in flight (`AppController._in_flight`). A report taken before a command runs would undo the optimistic value and the next click builds on stale state.
 - `QScreen.grabWindow(0, x, y, …)` takes coordinates **relative to that screen**, not global ones (the second monitor is at negative x).

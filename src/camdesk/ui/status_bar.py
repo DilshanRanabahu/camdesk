@@ -129,6 +129,10 @@ class StatusBar(QWidget):
     def _open_link(self, url: str) -> None:
         QDesktopServices.openUrl(QUrl(url))
 
+    def set_captures_dir(self, folder: Path) -> None:
+        self._captures_dir = folder
+        self.refresh_disk()
+
     def refresh_disk(self) -> None:
         gb = free_space_gb(self._captures_dir)
         self.disk.setText(strings.STATUS_DISK_FREE.format(gb=gb) if gb is not None else "")

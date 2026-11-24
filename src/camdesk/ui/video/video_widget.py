@@ -66,6 +66,8 @@ class VideoWidget(QOpenGLWidget):
     double_clicked = Signal()
     #: single click on the picture: (x, y) in 0–1 of the shown picture, and the widget point
     picture_clicked = Signal(float, float, QPoint)
+    #: mouse wheel over the video: +1 per notch up (zoom in), -1 per notch down
+    wheel_zoomed = Signal(int)
 
     def __init__(self, buffer: LatestFrameBuffer, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -139,6 +141,11 @@ class VideoWidget(QOpenGLWidget):
             self._pending_click = event.position().toPoint()
             self._click_timer.start(QApplication.doubleClickInterval())
         super().mouseReleaseEvent(event)
+
+    def wheelEvent(self, event: object) -> None:  # noqa: N802
+        steps = event.angleDelta().y() // 120  # type: ignore[attr-defined]
+        if steps:
+            self.wheel_zoomed.emit(int(steps))
 
     def mouseDoubleClickEvent(self, event: object) -> None:  # noqa: N802
         self._click_timer.stop()

@@ -2,9 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 8)
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 9)
 
-Decisions 18–43 were made during development; each row says why.
+Decisions 18–46 were made during development; each row says why.
 
 ---
 
@@ -56,6 +56,9 @@ Decisions 18–43 were made during development; each row says why.
 | 41 | Recorder design | Stream thread copies packets into a bounded queue; writer thread remuxes. Each file starts on a keyframe; one shared time origin for video + audio | The original packet is still being decoded; shared origin keeps A/V in sync (verified: ends within 0.1 s) |
 | 42 | Recording only on RTSP | Refused (with a message) on the MJPEG fallback | MJPEG has no packets to remux |
 | 43 | Non-blocking stop | `stop(timeout_s=0)` from the UI; the REC badge clears when the file is actually finished | Never block the UI thread; never say "saved" before it is |
+| 44 | Notifications | One path: `state.notify(Toast)` → bottom-center toast stack (above the dock); errors stay 6 s, same text restarts instead of stacking | Consistent feedback; never covers the controls |
+| 45 | "Reconnected" toast | Only after a drop that followed real video | First-connect retries aren't a "reconnect" |
+| 46 | Settings dialog | Folders stored as `None` when left at the default | Defaults keep following `Videos\CamDesk` |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -266,6 +269,10 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
 | CPU | ✅ **3.2% streaming vs 3.1% recording** — recording costs nothing measurable |
 | Size | 15.9 Mbps ≈ **7.2 GB/hour** at quality 49 |
 | Snapshot (Space) | ✅ 1920×1080 JPEG, 180 KB |
+
+### Polish on the real phone (build step 9)
+- Snapshot toast with thumbnail + Open: ✅
+- Resolution change 1920×1080 → 1280×720 → back: **no drop at all** — the decoder adapts to the new stream on the fly (so the "Reconnected" toast wasn't triggered; it is covered by unit tests, a real Wi-Fi drop is still to try).
 
 ### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).

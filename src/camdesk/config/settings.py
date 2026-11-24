@@ -40,6 +40,7 @@ class Settings:
     snapshots_dir: str | None = None  # None = default folder
     recordings_dir: str | None = None
     segment_minutes: int = 30
+    view_mode: str = "fit"  # fit | fill | original
     window: WindowState = field(default_factory=WindowState)
 
     # -- helpers ---------------------------------------------------------

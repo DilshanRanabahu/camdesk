@@ -40,6 +40,7 @@ CONNECT_HINT = "On the phone: open IP Webcam and tap Start server. Use the addre
 
 # Connection overlay
 RETRY = "Retry"
+FAILED_HINT = "Is IP Webcam running on the phone? Its IP address may have changed."
 CHANGE_CAMERA = "Change camera"
 
 # Control dock (tooltips show the shortcut)
@@ -90,6 +91,35 @@ REC_BADGE = "●  REC  {elapsed}"
 REC_BADGE_PART = "●  REC  {elapsed} · Part {part}"
 STATUS_RECORDING = "● REC {elapsed}"
 OPEN_LINK = "Open"
+
+# Settings dialog
+SETTINGS_TITLE = "Settings"
+TIP_SETTINGS = "Settings · Ctrl+,"
+SETTINGS_CAPTURES = "Captures"
+SETTINGS_SNAPSHOTS_FOLDER = "Snapshots folder"
+SETTINGS_RECORDINGS_FOLDER = "Recordings folder"
+SETTINGS_BROWSE = "Browse…"
+SETTINGS_RESET = "Default"
+SETTINGS_PART_LENGTH = "Start a new recording file every"
+SETTINGS_MINUTES = " min"
+SETTINGS_SHORTCUTS = "Keyboard shortcuts"
+SETTINGS_SAVE = "Save"
+SETTINGS_CANCEL = "Cancel"
+SHORTCUTS = (
+    ("Space", "Snapshot"),
+    ("R", "Start / stop recording"),
+    ("F  ·  F11  ·  double-click", "Fullscreen (Esc exits)"),
+    ("T", "Flashlight"),
+    ("C", "Switch camera"),
+    ("+  /  −  ·  mouse wheel", "Zoom"),
+    ("N", "Night vision"),
+    ("A  ·  click the picture", "Focus"),
+    ("V", "View mode: fit / fill / 1:1"),
+    ("Tab", "Show / hide side panel"),
+    ("Ctrl+R", "Retry connection"),
+    ("Ctrl+D", "Debug overlay"),
+    ("Ctrl+,", "Settings"),
+)
 
 # Status bar
 STATUS_BATTERY = "Battery {percent:.0f}%"

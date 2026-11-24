@@ -4,7 +4,7 @@ A Windows desktop app to view, record and control an Android phone running the *
 
 Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [architecture.md](architecture.md)
 
-> **Progress (2026-11-24):** Version 1 build steps **1–8 of 10** done — dark UI, live GPU video, every camera control, snapshots and MKV recording (all verified on the phone). Next: step 9, polish. `[x]` = done.
+> **Progress (2026-11-24):** Version 1 build steps **1–9 of 10** done — everything in Version 1 works; only the `.exe` build (step 10) is left. `[x]` = done.
 
 ## Tech Stack
 
@@ -31,14 +31,14 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 ### Connection
 - [x] 1. IP, port, optional username/password fields + **Connect** button (paste `http://ip:port` straight from IP Webcam)
 - [x] 2. Connection status indicator (connected / connecting / lost) — dot in the pill + status bar + overlay with Retry
-- [x] 3. Auto-reconnect when Wi-Fi drops (with backoff) — works; on-screen reconnect messages come in step 9
+- [x] 3. Auto-reconnect when Wi-Fi drops (with backoff) — overlay with attempt number, hints, "Reconnected" toast
 - [x] 4. Remember the last camera used (+ recent cameras list, forget button)
 
 ### Live View
 - [x] 5. Smooth live video with GPU decoding (RTSP H.264, MJPEG fallback)
 - [x] 6. Fullscreen mode (double-click or F11)
 - [x] 7. View modes: fit / fill / original size (`V` key + View card in the side panel)
-- [ ] 8. On-screen FPS, resolution and latency (small always-on badge; full numbers already in 8a)
+- [x] 8. On-screen FPS, resolution and decoder (status bar; full numbers incl. frame age in the `Ctrl+D` overlay)
 - [x] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use
 
 ### Capture
@@ -57,7 +57,7 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 - [x] 18. Rotate / flip image — done on the phone, so recordings are rotated too
 
 ### Status Bar
-- [ ] 19. Phone battery level — only when the phone reports it (IP Webcam 1.19 on the A06 sends no sensor data)
+- [x] 19. Phone battery level + low-battery warning — shown only when the phone reports it (the A06 doesn't)
 - [x] 20. Recording status and free disk space (warns < 2 GB, stops < 1 GB)
 
 ### UI
@@ -107,6 +107,8 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 | `A` | Autofocus (temporary key until step 7) |
 | `N` | Night vision (temporary key until step 7) |
 | `Ctrl` + `D` | Debug overlay |
+| `Ctrl` + `,` | Settings |
+| Mouse wheel | Zoom |
 | `V` | Cycle view mode: fit / fill / original |
 
 ---

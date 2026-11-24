@@ -13,7 +13,8 @@ from pathlib import Path
 import av
 import numpy as np
 from av.video.reformatter import ColorRange
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtGui import QImage
 
 from camdesk.capture import storage
 from camdesk.core.frames import NV12, YUV420P, VideoFrame
@@ -67,8 +68,11 @@ def save_snapshot(frame: VideoFrame, folder: Path) -> Path:
     return path
 
 
+THUMBNAIL_WIDTH = 160
+
+
 class SnapshotService(QObject):
-    saved = Signal(str)  # path
+    saved = Signal(str, object)  # path, QImage thumbnail (made on the worker thread)
     failed = Signal(str)  # message
 
     def take(self, frame: VideoFrame, folder: Path) -> None:
@@ -77,11 +81,16 @@ class SnapshotService(QObject):
         def work() -> None:
             try:
                 path = save_snapshot(frame, folder)
+                thumb = QImage(str(path))  # QImage is safe to use off the UI thread
+                if not thumb.isNull():
+                    thumb = thumb.scaledToWidth(
+                        THUMBNAIL_WIDTH, Qt.TransformationMode.SmoothTransformation
+                    )
             except Exception as exc:  # disk full, permissions, odd frame…
                 log.exception("Snapshot failed")
                 self.failed.emit(str(exc))
                 return
             log.info("Snapshot saved: %s", path)
-            self.saved.emit(str(path))
+            self.saved.emit(str(path), thumb)
 
         threading.Thread(target=work, name="Snapshot", daemon=True).start()

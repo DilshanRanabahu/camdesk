@@ -151,3 +151,19 @@ class NativeFrame:
         rect.top += thickness
         rect.right -= thickness
         rect.bottom -= thickness
+
+
+def dark_title_bar(window: QWidget) -> None:
+    """Ask Windows for a dark native title bar (for dialogs that keep the normal frame)."""
+    if sys.platform != "win32":
+        return
+    try:
+        value = ctypes.c_int(1)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            int(window.winId()),
+            _DWMWA_USE_IMMERSIVE_DARK_MODE,
+            ctypes.byref(value),
+            ctypes.sizeof(value),
+        )
+    except (AttributeError, OSError):
+        log.debug("Dark title bar unavailable", exc_info=True)

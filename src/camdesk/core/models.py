@@ -139,3 +139,4 @@ class Toast:
     level: ToastLevel = ToastLevel.INFO
     action_label: str = ""
     action_path: str = ""  # e.g. a folder/file to open when the action is clicked
+    thumbnail: object = field(default=None, compare=False)  # QImage, e.g. a snapshot preview

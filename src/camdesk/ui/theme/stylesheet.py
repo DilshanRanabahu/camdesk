@@ -184,6 +184,20 @@ QLabel#RecBadge {{
     font-size: {t.SIZE_MONO}px;
     font-weight: 600;
 }}
+QFrame#Toast {{
+    background: {t.BG_ELEVATED};
+    border: 1px solid {t.BORDER};
+    border-radius: {t.RADIUS_MD}px;
+}}
+QLabel#ToastThumb {{ border-radius: {t.RADIUS_SM}px; }}
+QDialog {{ background: {t.BG_SURFACE}; }}
+QSpinBox {{
+    background: {t.BG_ELEVATED};
+    border: 1px solid {t.BORDER};
+    border-radius: {t.RADIUS_SM}px;
+    padding: 0 {t.SPACE_2}px;
+    min-height: {t.CONTROL_HEIGHT - 6}px;
+}}
 QLabel#StatusRec {{ color: {t.DANGER}; font-weight: 600; }}
 QWidget#Flash {{ background: {t.TEXT_ON_ACCENT}; }}
 QPushButton[variant="segment"] {{

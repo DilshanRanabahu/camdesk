@@ -41,6 +41,7 @@ from camdesk.core.models import (
     Toast,
     ToastLevel,
 )
+from camdesk.core.notices import Notices
 from camdesk.core.state import AppState
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class AppController(QObject):
         self._stream: Any = None
         self._in_flight = 0  # commands sent, not yet answered
         self.capture = capture or CaptureManager(state, settings, latest_frame, parent=self)
+        self.notices = Notices(state, parent=self)
         self._auth_warned = False
 
         self._zoom_pending: int | None = None

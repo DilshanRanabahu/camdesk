@@ -4,7 +4,7 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
-> **Status:** build steps 1–8 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
+> **Status:** build steps 1–9 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
 
 ---
 
@@ -202,6 +202,7 @@ camara/
 │       │   ├── messages.py       # ✅ User-facing text produced by core (toasts, validation)
 │       │   ├── validation.py     # ✅ Parse the connect form (accepts http://ip:port as IP Webcam shows it)
 │       │   ├── capture_manager.py # ✅ Snapshot + record actions, elapsed timer, disk checks, toasts
+│       │   ├── notices.py        # ✅ State changes → toasts (Reconnected, low battery)
 │       │   ├── geometry.py       # ✅ Rotate order, mirror/flip toggling, click → focus_region (-1000…1000)
 │       │   └── errors.py         # ✅ App-specific exceptions
 │       │
@@ -238,6 +239,7 @@ camara/
 │       │   └── fake_video_source.py  # ✅ Color bars + moving bar; can simulate failed opens / drops
 │       │
 │       ├── ui/
+│       │   ├── settings_dialog.py # ✅ Ctrl+,: capture folders, recording part length, shortcut list
 │       │   ├── main_window.py    # ✅ Custom-frame window: title bar, connect ⇄ video pages, status bar, shortcuts, geometry
 │       │   ├── win_frame.py      # ✅ Native Windows behavior for the custom frame (snap, resize, shadow) via WM_NCHITTEST
 │       │   ├── title_bar.py      # ✅ Custom title bar + camera selector pill + window buttons
@@ -256,7 +258,7 @@ camara/
 │       │   │   ├── toggle.py         # ✅ Animated switch, set_checked_silently()
 │       │   │   ├── slider.py         # ✅ Labeled slider: live value_changed + value_committed on release
 │       │   │   ├── card.py           # ✅ Card + labeled row
-│       │   │   └── toast.py          # step 9
+│       │   │   └── toast.py          # ✅ ToastHost + cards: icon, thumbnail, Open, auto-dismiss, max 3
 │       │   └── theme/
 │       │       ├── tokens.py         # ✅ Colors, spacing, radius, fonts (from ui-design.md)
 │       │       ├── stylesheet.py     # ✅ Builds QSS + dark palette from tokens
@@ -294,7 +296,8 @@ camara/
 │   ├── test_controls.py          # ✅ Controller actions, widgets, side panel, dock, stale-report race
 │   ├── test_state.py             # ✅ Emit-on-change, keep capabilities while switching
 │   ├── test_controller.py        # ✅ End-to-end: real client + stream, fake phone + fake video
-│   └── test_capture.py           # ✅ Naming, JPEG colors, recorder parts/keyframes/audio, Space/R flow
+│   ├── test_capture.py           # ✅ Naming, JPEG colors, recorder parts/keyframes/audio, Space/R flow
+│   └── test_polish.py            # ✅ Notices, toasts, settings dialog, view-mode memory, wheel zoom
 │
 └── scripts/
     ├── run.ps1                   # ✅ Run in dev mode (passes args through)
@@ -337,7 +340,7 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 
 - Every service catches its own errors, logs them, and reports a **user-friendly** message through `AppState.notification`.
 - Network errors → reconnect logic, not crashes.
-- Unexpected exceptions → global handler logs the traceback and shows "Something went wrong · Open log".
+- Unexpected exceptions → global handler (`app.py`) logs the traceback and shows a "Something went wrong" toast with **Open** → the log file.
 - Decoder in use, stream type and reconnects are logged for troubleshooting.
 
 ---
@@ -366,5 +369,5 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 6. ✅ UI shell — theme, main window, custom title bar, connect screen, connection overlay, status bar
 7. ✅ Control dock + side panel → camera controls working (verified 19/19 on the phone)
 8. ✅ `capture/` — snapshot + MKV recording with 30-min segments (verified on the phone, no extra CPU)
-9. Reconnect, toasts, settings persistence, shortcuts
+9. ✅ Toasts, reconnect notices + hints, settings dialog, view-mode memory, wheel zoom, crash notice
 10. Nuitka build → `CamDesk.exe`

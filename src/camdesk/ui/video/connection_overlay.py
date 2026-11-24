@@ -85,7 +85,8 @@ class ConnectionOverlay(QWidget):
             self.detail.setText(message)
         else:
             self.title.setText(strings.FAILED)
-            self.detail.setText(message)
+            hint = strings.FAILED_HINT
+            self.detail.setText(f"{message}\n{hint}" if message else hint)
         self.detail.setVisible(bool(self.detail.text()))
         self.buttons.setVisible(state is ConnectionState.FAILED)
         dim = state in (ConnectionState.RECONNECTING, ConnectionState.FAILED)

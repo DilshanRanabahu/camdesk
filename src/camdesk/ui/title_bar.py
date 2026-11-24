@@ -57,6 +57,7 @@ class TitleBar(QWidget):
     minimize_requested = Signal()
     maximize_toggled = Signal()
     close_requested = Signal()
+    settings_requested = Signal()
 
     def __init__(self, app_icon: QIcon, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -79,6 +80,15 @@ class TitleBar(QWidget):
         layout.addSpacing(tokens.SPACE_4)
         layout.addWidget(self.pill)
         layout.addStretch(1)
+        self.settings_button = QPushButton()
+        self.settings_button.setProperty("variant", "icon")
+        self.settings_button.setIcon(icons.icon("settings", tokens.ICON_MD, tokens.TEXT_SECONDARY))
+        self.settings_button.setIconSize(icons.icon_size(tokens.ICON_MD))
+        self.settings_button.setToolTip(strings.TIP_SETTINGS)
+        self.settings_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.settings_button.clicked.connect(self.settings_requested)
+        layout.addWidget(self.settings_button)
+        layout.addSpacing(tokens.SPACE_2)
 
         self._buttons: list[QPushButton] = []
         self.min_button = self._window_button("minimize", strings.TIP_MINIMIZE, "window")

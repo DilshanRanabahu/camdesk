@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from camdesk.config.settings import Settings
 from camdesk.core.controller import AppController
 from camdesk.core.frames import LatestFrameBuffer
 from camdesk.core.models import (
@@ -38,6 +39,7 @@ from camdesk.ui import strings
 from camdesk.ui.connect_view import ConnectView, camera_label
 from camdesk.ui.panels.control_dock import ControlDock
 from camdesk.ui.panels.side_panel import SidePanel
+from camdesk.ui.settings_dialog import SettingsDialog
 from camdesk.ui.status_bar import STATE_COLORS, StatusBar
 from camdesk.ui.theme import icons, tokens
 from camdesk.ui.title_bar import TitleBar
@@ -50,9 +52,12 @@ from camdesk.ui.video.overlays import (
     format_elapsed,
 )
 from camdesk.ui.video.video_widget import VideoWidget, ViewMode
+from camdesk.ui.widgets.toast import ToastHost
 from camdesk.ui.win_frame import NativeFrame
 
 log = logging.getLogger(__name__)
+
+WHEEL_ZOOM_STEP = 0.25  # zoom change per mouse-wheel notch
 
 
 class MainWindow(QMainWindow):
@@ -107,6 +112,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(middle, 1)
         layout.addWidget(self.status_bar)
         self.setCentralWidget(root)
+        self.toasts = ToastHost(root)
 
         self.frame = NativeFrame(self, tokens.RESIZE_BORDER, self._is_caption)
         if custom_frame:
@@ -115,6 +121,10 @@ class MainWindow(QMainWindow):
 
         self._wire()
         self._restore_geometry()
+        try:
+            self.set_view_mode(ViewMode(controller.settings.view_mode))
+        except ValueError:
+            self.set_view_mode(ViewMode.FIT)
         self._on_camera_changed(state.camera)
         self._on_connection_changed(state.connection, state.connection_message)
 
@@ -133,6 +143,7 @@ class MainWindow(QMainWindow):
         self.title_bar.maximize_toggled.connect(self._toggle_maximized)
         self.title_bar.close_requested.connect(self.close)
         self.title_bar.pill.clicked.connect(self._show_camera_menu)
+        self.title_bar.settings_requested.connect(self.open_settings)
 
         self.connect_view.connect_requested.connect(self._connect_new)
         self.connect_view.recent_selected.connect(self._connect_saved)
@@ -141,10 +152,11 @@ class MainWindow(QMainWindow):
         self.connection_overlay.change_camera_requested.connect(c.close_camera)
         self.video.double_clicked.connect(self.toggle_fullscreen)
         self.video.picture_clicked.connect(self._focus_at)
+        self.video.wheel_zoomed.connect(self._wheel_zoom)
 
         s.camera_status_changed.connect(self.side_panel.update_status)
         s.capabilities_changed.connect(self._on_capabilities_changed)
-        self.side_panel.view_mode_selected.connect(self.video.set_view_mode)
+        self.side_panel.view_mode_selected.connect(self.set_view_mode)
         self.dock.switch_camera_requested.connect(c.switch_camera)
         self.dock.focus_requested.connect(c.focus)
         self.dock.fullscreen_requested.connect(self.toggle_fullscreen)
@@ -172,6 +184,7 @@ class MainWindow(QMainWindow):
             "N": c.toggle_night_vision,
             "A": c.focus,
             "Ctrl+R": c.retry,
+            "Ctrl+,": self.open_settings,
             "Tab": self.toggle_side_panel,
             "Space": self.take_snapshot,
             "R": c.capture.toggle_recording,
@@ -242,10 +255,11 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event: object) -> None:  # noqa: N802
         super().resizeEvent(event)  # type: ignore[arg-type]
         self._update_side_panel()
+        self.toasts.reposition()
 
     def _show_toast(self, toast: Toast) -> None:
         log.info("Notification: %s", toast.message)
-        self.status_bar.show_message(toast.message, toast.action_path)
+        self.toasts.show_toast(toast)
 
     def _on_recording_changed(self, r: RecordingState) -> None:
         self.rec_badge.set_recording(r.active, r.elapsed_s, r.part)
@@ -329,9 +343,26 @@ class MainWindow(QMainWindow):
 
     def cycle_view_mode(self) -> None:
         modes = list(ViewMode)
-        mode = modes[(modes.index(self.video.view_mode) + 1) % len(modes)]
+        self.set_view_mode(modes[(modes.index(self.video.view_mode) + 1) % len(modes)])
+
+    def set_view_mode(self, mode: ViewMode) -> None:
         self.video.set_view_mode(mode)
         self.side_panel.set_view_mode(mode)
+        self.controller.settings.view_mode = mode.value  # saved on exit
+
+    def _wheel_zoom(self, steps: int) -> None:
+        if self.state.connection is ConnectionState.CONNECTED:
+            self.controller.set_zoom(self.state.camera_status.zoom_ratio + steps * WHEEL_ZOOM_STEP)
+
+    def open_settings(self) -> None:
+        defaults = Settings()  # unset folders = the defaults
+        dialog = SettingsDialog(
+            self.controller.settings, defaults.snapshots_path(), defaults.recordings_path(), self
+        )
+        if dialog.exec():
+            dialog.apply()
+            self.controller.save_settings()
+            self.status_bar.set_captures_dir(self.controller.settings.recordings_path())
 
     # -- window frame & geometry ----------------------------------------------
 

@@ -152,10 +152,15 @@ class CaptureManager(QObject):
             name = Path(last.path).name
             self._toast(messages.RECORDING_SAVED.format(name=name), ToastLevel.SUCCESS, folder)
 
-    @Slot(str)
-    def _on_snapshot_saved(self, path: str) -> None:
-        self._toast(
-            messages.SNAPSHOT_SAVED.format(name=Path(path).name), ToastLevel.SUCCESS, Path(path)
+    @Slot(str, object)
+    def _on_snapshot_saved(self, path: str, thumbnail: object) -> None:
+        self.state.notify(
+            Toast(
+                messages.SNAPSHOT_SAVED.format(name=Path(path).name),
+                ToastLevel.SUCCESS,
+                action_path=path,
+                thumbnail=thumbnail,
+            )
         )
 
     @Slot(str)
