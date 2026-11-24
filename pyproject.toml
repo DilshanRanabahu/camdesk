@@ -5,6 +5,8 @@ description = "View, record and control an Android IP Webcam from Windows"
 authors = [
     { name = "DilshanRanabahu" }
 ]
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "av>=19.0.2",

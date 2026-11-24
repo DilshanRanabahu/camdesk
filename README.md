@@ -11,6 +11,7 @@
   <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-0E0F12?style=flat-square&logo=python&logoColor=4C8DFF">
   <img alt="Qt 6 / PySide6" src="https://img.shields.io/badge/UI-PySide6%20(Qt%206)-0E0F12?style=flat-square&logo=qt&logoColor=4C8DFF">
   <img alt="Status: Version 1 complete" src="https://img.shields.io/badge/status-v1%20complete-2ECC71?style=flat-square">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0E0F12?style=flat-square"></a>
 </p>
 
 # CamDesk
@@ -139,3 +140,9 @@ To regenerate them from new source images, run `uv run python scripts/make_icons
 | Settings and logs | `%APPDATA%\CamDesk\` (log: `logs\camdesk.log`) |
 | Snapshots and recordings | `%USERPROFILE%\Videos\CamDesk\` |
 | Camera passwords | Windows Credential Manager |
+
+## License
+
+CamDesk is released under the [MIT License](LICENSE) — free to use, modify and share; keep the copyright notice.
+It uses Qt / PySide6 (LGPL v3) and FFmpeg via PyAV (LGPL), which are dynamically linked and keep their own licenses.
+CamDesk is an independent project and is not affiliated with the IP Webcam app or its developer.
