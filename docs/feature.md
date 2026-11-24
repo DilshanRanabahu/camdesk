@@ -31,7 +31,7 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 ### Connection
 - [x] 1. IP, port, optional username/password fields + **Connect** button (paste `http://ip:port` straight from IP Webcam)
 - [x] 2. Connection status indicator (connected / connecting / lost) — dot in the pill + status bar + overlay with Retry
-- [x] 3. Auto-reconnect when Wi-Fi drops (with backoff) — overlay with attempt number, hints, "Reconnected" toast
+- [x] 3. Auto-reconnect when Wi-Fi drops (with backoff) — overlay with attempt number, hints, "Reconnected" toast (real Wi-Fi drop: video back 4.2 s after Wi-Fi returns)
 - [x] 4. Remember the last camera used (+ recent cameras list, forget button)
 
 ### Live View

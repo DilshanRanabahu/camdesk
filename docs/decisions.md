@@ -272,7 +272,10 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
 
 ### Polish on the real phone (build step 9)
 - Snapshot toast with thumbnail + Open: ✅
-- Resolution change 1920×1080 → 1280×720 → back: **no drop at all** — the decoder adapts to the new stream on the fly (so the "Reconnected" toast wasn't triggered; it is covered by unit tests, a real Wi-Fi drop is still to try).
+- Resolution change 1920×1080 → 1280×720 → back: **no drop at all** — the decoder adapts to the new stream on the fly (so the "Reconnected" toast wasn't triggered there).
+- **Real Wi-Fi drop** (phone Wi-Fi turned off for 10 s over ADB, then on): **7/7 passed**. Drop noticed after 6.5 s
+  (network timeouts), overlay "Reconnecting… (attempt 2, 3)" over the dimmed last frame, **video back 4.2 s after
+  Wi-Fi returned**, "Reconnected" toast, 29 FPS again. Phone came back on the same IP.
 
 ### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).
