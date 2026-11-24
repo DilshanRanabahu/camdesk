@@ -138,7 +138,7 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     state = AppState()
     client = CameraClient()
-    controller = AppController(state, settings, client, make_stream)
+    controller = AppController(state, settings, client, make_stream, latest_frame=buffer.peek)
     window = MainWindow(
         buffer,
         state,

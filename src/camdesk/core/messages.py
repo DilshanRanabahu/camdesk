@@ -12,6 +12,19 @@ CONNECTED = "Connected to {camera}"
 NOT_AVAILABLE = "{label} is not available on this camera"
 SETTINGS_SAVE_FAILED = "Couldn't save settings: {reason}"
 
+# Snapshots & recording
+SNAPSHOT_SAVED = "Snapshot saved · {name}"
+SNAPSHOT_FAILED = "Snapshot failed: {reason}"
+NO_FRAME_YET = "No picture yet — wait for the video to start"
+RECORDING_STARTED = "Recording · {name}"
+RECORDING_SAVED = "Recording saved · {name}"
+RECORDING_NEEDS_MAIN_STREAM = (
+    "Recording needs the main video stream (not available on the backup stream)"
+)
+RECORDING_NOT_CONNECTED = "Connect to a camera to record"
+LOW_DISK_WARNING = "Only {gb:.1f} GB free — recording uses about 7 GB per hour at high quality"
+DISK_FULL = "Not enough disk space to record ({gb:.1f} GB free)"
+
 # Address validation (connect screen)
 ADDRESS_EMPTY = "Enter the phone's IP address"
 ADDRESS_INVALID = "That doesn't look like an IP address (example: 192.168.1.5)"

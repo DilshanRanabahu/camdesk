@@ -2,9 +2,9 @@
 
 Final decisions for the project. Anything not listed here follows [architecture.md](architecture.md), [feature.md](feature.md) and [ui-design.md](ui-design.md).
 
-**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 7)
+**Status:** Approved · **Created:** 2026-11-23 · **Last updated:** 2026-11-24 (after build step 8)
 
-Decisions 18–39 were made during development; each row says why.
+Decisions 18–43 were made during development; each row says why.
 
 ---
 
@@ -52,6 +52,10 @@ Decisions 18–39 were made during development; each row says why.
 | 37 | Tap-to-focus | Click → `focus_region` "X,Y" (-1000…1000, mapped through orientation/mirror) then `/focus`; single click waits out the double-click interval | Verified: `focus_region` only accepts a comma; double-click stays fullscreen |
 | 38 | Quality slider | Sent on release, not while dragging | Each change restarts the phone's encoder |
 | 39 | Stale status vs optimistic UI | Ignore status reports while commands are in flight | Found on the phone: fast Mirror + Flip clicks left mirror on |
+| 40 | Snapshot source | The decoded frame on screen → JPEG with FFmpeg's mjpeg encoder (not `/shot.jpg`) | Instant, no network round-trip, already rotated/mirrored like the view; no Pillow dependency |
+| 41 | Recorder design | Stream thread copies packets into a bounded queue; writer thread remuxes. Each file starts on a keyframe; one shared time origin for video + audio | The original packet is still being decoded; shared origin keeps A/V in sync (verified: ends within 0.1 s) |
+| 42 | Recording only on RTSP | Refused (with a message) on the MJPEG fallback | MJPEG has no packets to remux |
+| 43 | Non-blocking stop | `stop(timeout_s=0)` from the UI; the REC badge clears when the file is actually finished | Never block the UI thread; never say "saved" before it is |
 | 23 | Decoder order | D3D11VA → DXVA2 → software (CUDA skipped) | Measured: 5% / 8% / 33% CPU; CUDA fails on the phone's stream |
 | 24 | YUV→RGB matrix uniform | Set with `QMatrix3x3`, not `setUniformValueArray` | PySide6 silently uploads nothing for a mat3 via the array call → black video (caught by the render tests) |
 | 25 | Missed-repaint safety | 100 ms watchdog repaints if a frame is waiting | A dropped `update()` before the widget is exposed stalled the first frame for 3.4 s |
@@ -249,6 +253,19 @@ Almost all latency is before the PC (phone encoder, Wi-Fi, IP Webcam buffering).
 | Click on the picture | ✅ focus ring + `focus_region` 500x0 for a click on the right half |
 | Quality slider drag → release | ✅ one command (70), video recovers |
 | Resolution 1920×1080 → 1280×720 → back | ✅ stream recovers by itself in **2.6 s** |
+
+### Recording on the real phone (build step 8)
+~72 s recorded with 1-minute parts while streaming:
+
+| Check | Result |
+|---|---|
+| Parts | ✅ part 1 = 60.3 s, part 2 started at 1:00 exactly |
+| Format | ✅ H.264 1920×1080 + AAC 44.1 kHz in MKV; every part starts on a keyframe at time 0 |
+| Integrity | ✅ 1800/1800 and 359/359 frames decode, 0 errors, 0 dropped packets |
+| A/V sync | ✅ video and audio end within 0.1 s |
+| CPU | ✅ **3.2% streaming vs 3.1% recording** — recording costs nothing measurable |
+| Size | 15.9 Mbps ≈ **7.2 GB/hour** at quality 49 |
+| Snapshot (Space) | ✅ 1920×1080 JPEG, 180 KB |
 
 ### Open questions
 - **Latency vs. resolution:** test 1280×720 / lower quality to get under 200 ms (CamDesk itself adds ~2 ms).

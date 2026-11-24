@@ -49,6 +49,7 @@ TIP_SWITCH_CAMERA = "Switch camera · C"
 TIP_FOCUS = "Focus · A (or click the picture)"
 TIP_FULLSCREEN = "Fullscreen · F"
 TIP_COMING_SOON = "Coming soon"
+TIP_STOP_RECORD = "Stop recording · R"
 
 # Side panel
 PANEL_CAMERA = "Camera"
@@ -78,6 +79,17 @@ ORIENTATION_NAMES = {
     "upsidedown": "Upside down",
     "upsidedown_portrait": "Portrait (flipped)",
 }
+
+# Captures card
+PANEL_CAPTURES = "Captures"
+OPEN_SNAPSHOTS = "Open snapshots folder"
+OPEN_RECORDINGS = "Open recordings folder"
+
+# Recording badge
+REC_BADGE = "●  REC  {elapsed}"
+REC_BADGE_PART = "●  REC  {elapsed} · Part {part}"
+STATUS_RECORDING = "● REC {elapsed}"
+OPEN_LINK = "Open"
 
 # Status bar
 STATUS_BATTERY = "Battery {percent:.0f}%"

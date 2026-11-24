@@ -22,8 +22,8 @@ Rules for AI coding agents are in [../AGENTS.md](../AGENTS.md) at the project ro
 | 5. AppState + AppController | ✅ optimistic, capability-aware, throttled zoom |
 | 6. UI shell (main window, connect screen) | ✅ custom title bar, connect screen, status bar |
 | 7. Controls (dock + side panel) | ✅ verified 19/19 on the phone |
-| 8. Snapshots + MKV recording | next |
-| 9. Polish (toasts, reconnect UI, shortcuts) | |
+| 8. Snapshots + MKV recording | ✅ no extra CPU, 0 dropped packets |
+| 9. Polish (toasts, reconnect UI, shortcuts) | next |
 | 10. `CamDesk.exe` build | |
 
 Measurements from the real phone are in [decisions.md § 5](decisions.md#5-verified-on-the-real-phone-2026-11-23).

@@ -17,8 +17,8 @@
 
 A smooth, modern Windows desktop app to view, record and control an Android phone running the **IP Webcam** app over Wi-Fi.
 
-> **Status: in development.** Version 1, build steps **1–7 of 10** done: dark UI, live GPU-decoded video, and every
-> camera control (flashlight, zoom, rotate, mirror, tap-to-focus, quality, resolution). Snapshots and recording are next. See [progress](docs/README.md#project-status).
+> **Status: in development.** Version 1, build steps **1–8 of 10** done: dark UI, live GPU-decoded video, every camera
+> control, snapshots and MKV recording. Polish (toasts, settings) and the `.exe` build are next. See [progress](docs/README.md#project-status).
 
 <p align="center">
   <img src="docs/assets/connect-screen.png" alt="CamDesk connect screen: IP address, port, login and recent cameras" width="800">
@@ -34,7 +34,7 @@ A smooth, modern Windows desktop app to view, record and control an Android phon
   Measured on a Galaxy A06 → MX230 laptop: **1080p @ 30 FPS, ~2% CPU, 0 dropped frames**.
 - **Never lags behind:** only the newest frame is kept, so delay can't build up.
 - **Self-healing connection:** automatic reconnect with backoff, plus an MJPEG fallback stream.
-- **Recording without re-encoding** (coming in step 8): H.264 + AAC saved straight to crash-safe MKV.
+- **Recording without re-encoding:** H.264 + AAC saved straight to crash-safe MKV, split every 30 minutes — measured on the phone: **no extra CPU** while recording, 0 dropped packets.
 - **Private:** no telemetry; talks only to your phone on the local network. Passwords live in Windows Credential Manager.
 
 ## Requirements
@@ -63,6 +63,8 @@ If the custom title bar ever misbehaves, `--native-frame` uses the standard Wind
 | `Ctrl+D` | Debug overlay: FPS, CPU, decoder, bitrate, frame age |
 | `F11` / `F` / double-click | Fullscreen (`Esc` exits) |
 | `V` | View mode: fit / fill / original size |
+| `Space` | Snapshot (JPEG) |
+| `R` | Start / stop recording (MKV) |
 | `Tab` | Show / hide the side panel |
 | `T` / `C` / `N` / `A` | Flashlight / switch camera / night vision / focus |
 | Click the picture | Focus on that spot |
@@ -76,7 +78,7 @@ Recommended phone settings (resolution, Samsung battery settings, static IP): [d
 ## Development
 
 ```powershell
-uv run pytest            # 188 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
+uv run pytest            # 201 tests: no phone needed (fake camera + fake video + real OpenGL render checks)
 uv run ruff check .      # lint
 uv run ruff format .     # format
 ```

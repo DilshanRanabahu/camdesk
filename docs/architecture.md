@@ -4,7 +4,7 @@ How the app is organized so it stays **smooth** (video never waits on anything) 
 
 Related docs: [feature.md](feature.md) · [ui-design.md](ui-design.md) · [decisions.md](decisions.md) · [AGENTS.md](../AGENTS.md)
 
-> **Status:** build steps 1–7 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
+> **Status:** build steps 1–8 done (✅ in the folder tree and build order). `app.py` is the composition root: it builds the services, AppState, AppController and the MainWindow.
 
 ---
 
@@ -47,11 +47,11 @@ The key to smoothness: the **main (UI) thread never decodes, waits on the networ
 |---|---|---|---|
 | **Main / UI** | Qt | Widgets, input, OpenGL texture upload + draw | Display refresh (60 Hz) |
 | **Stream** | `StreamService` (Python thread; emits Qt signals) | RTSP read → GPU decode (D3D11VA) → put frame in buffer; pass packets to recorder | Camera FPS |
-| **Recorder** | `Recorder` (QThread + queue) | Remux H.264 + AAC audio packets → MKV (no re-encode), new file every 30 min | Camera FPS |
+| **Recorder** | `Recorder` (Python thread + bounded queue) | Remux H.264 + AAC packets → MKV (no re-encode), new part every 30 min at a keyframe | Camera FPS |
 | **Control** | `CameraClient` (QThread; its event queue keeps commands in order) | HTTP commands to phone; re-reads status after each one | On demand |
 | **Poller** | QTimer inside the `CameraClient` thread | `status.json` + `sensors.json` (settings, capabilities, battery) | Every 5 s |
 | **Motion** (V2) | `MotionDetector` (QThread) | Downscaled grayscale diff | ~5 FPS |
-| **Snapshot** | `QThreadPool` task | Encode + save JPEG | On demand |
+| **Snapshot** | `SnapshotService` (short-lived thread) | Latest frame → JPEG via FFmpeg mjpeg, atomic save | On demand |
 
 ### Why the recorder gets packets, not frames
 The stream thread reads **compressed H.264 video and AAC audio packets** from the same RTSP session. All packets go to the recorder untouched (remux = almost zero CPU); only video packets also go to the decoder for display. Recording never adds decode/encode work.
@@ -201,6 +201,7 @@ camara/
 │       │   ├── controller.py     # ✅ AppController — every user action, optimistic + throttled
 │       │   ├── messages.py       # ✅ User-facing text produced by core (toasts, validation)
 │       │   ├── validation.py     # ✅ Parse the connect form (accepts http://ip:port as IP Webcam shows it)
+│       │   ├── capture_manager.py # ✅ Snapshot + record actions, elapsed timer, disk checks, toasts
 │       │   ├── geometry.py       # ✅ Rotate order, mirror/flip toggling, click → focus_region (-1000…1000)
 │       │   └── errors.py         # ✅ App-specific exceptions
 │       │
@@ -217,11 +218,11 @@ camara/
 │       │   ├── hwaccel.py        # ✅ D3D11VA → DXVA2 → software selection
 │       │   └── service.py        # ✅ StreamService — thread, reconnect/backoff, fallback, stats
 │       │
-│       ├── capture/              # Saving to disk
-│       │   ├── recorder.py       # Packet remux → MKV (video + audio), 30-min segments at keyframes
+│       ├── capture/              # ✅ Saving to disk
+│       │   ├── recorder.py       # ✅ Packet remux → MKV (video + audio), parts at keyframes, new part on reconnect
 │       │   ├── converter.py      # V2: MKV → MP4 for sharing
-│       │   ├── snapshot.py       # Save JPEG from latest frame
-│       │   └── storage.py        # File naming, captures folder, free-space checks
+│       │   ├── snapshot.py       # ✅ Latest frame → JPEG (FFmpeg mjpeg) on a worker thread
+│       │   └── storage.py        # ✅ File naming, unique names, part paths, free-space checks
 │       │
 │       ├── vision/               # V2+
 │       │   ├── motion.py         # MotionDetector
@@ -247,7 +248,7 @@ camara/
 │       │   │   ├── video_widget.py   # ✅ QOpenGLWidget, texture upload, view modes, repaint watchdog
 │       │   │   ├── shaders.py        # ✅ YUV → RGB shaders (NV12 / YUV420P, BT.601/709)
 │       │   │   ├── connection_overlay.py # ✅ Connecting / Reconnecting (dimmed) / Failed + Retry, Change camera
-│       │   │   └── overlays.py       # ✅ Debug overlay (Ctrl+D), focus ring; later: REC badge, flash
+│       │   │   └── overlays.py       # ✅ Debug overlay (Ctrl+D), focus ring, REC badge, snapshot flash
 │       │   ├── panels/
 │       │   │   ├── control_dock.py   # ✅ Floating dock, fades after 3 s idle, capability-aware
 │       │   │   └── side_panel.py     # ✅ Camera / Image / View cards; Tab or ◧ toggles; auto-hides < 1100 px
@@ -293,8 +294,7 @@ camara/
 │   ├── test_controls.py          # ✅ Controller actions, widgets, side panel, dock, stale-report race
 │   ├── test_state.py             # ✅ Emit-on-change, keep capabilities while switching
 │   ├── test_controller.py        # ✅ End-to-end: real client + stream, fake phone + fake video
-│   ├── test_recorder.py          # Segmenting at 30 min, MKV playable — step 8
-│   └── test_storage.py           # step 8
+│   └── test_capture.py           # ✅ Naming, JPEG colors, recorder parts/keyframes/audio, Space/R flow
 │
 └── scripts/
     ├── run.ps1                   # ✅ Run in dev mode (passes args through)
@@ -365,6 +365,6 @@ Python 3.12, managed with **uv** (`uv sync`, `uv run`). `uv.lock` is committed s
 5. ✅ `core/` — AppState + AppController wiring (temporary keys drive the phone)
 6. ✅ UI shell — theme, main window, custom title bar, connect screen, connection overlay, status bar
 7. ✅ Control dock + side panel → camera controls working (verified 19/19 on the phone)
-8. `capture/` — snapshot + MKV recording with 30-min segments
+8. ✅ `capture/` — snapshot + MKV recording with 30-min segments (verified on the phone, no extra CPU)
 9. Reconnect, toasts, settings persistence, shortcuts
 10. Nuitka build → `CamDesk.exe`

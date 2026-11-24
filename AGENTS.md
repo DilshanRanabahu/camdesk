@@ -17,8 +17,9 @@ If a request conflicts with these docs, say so and ask before proceeding. If a d
 
 ## Current Status
 
-- Version 1 build steps **1–7 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 8, snapshots + MKV recording.
-- `ui/main_window.py` is the real window: title bar, connect screen, video + control dock, side panel, status bar. Single-key shortcuts (and `Tab`) are off on the connect screen. Snapshot/Record dock buttons are disabled until step 8.
+- Version 1 build steps **1–8 of 10 done** (see the [build order](docs/architecture.md#10-build-order-version-1)). Next: step 9, polish (toasts, reconnect UI, settings).
+- `ui/main_window.py` is the real window: title bar, connect screen, video + control dock, side panel, status bar. Single-key shortcuts (and `Tab`, `Space`) are off on the connect screen.
+- Capture lives in `core/capture_manager.py` (used by AppController as `controller.capture`) and `capture/` (recorder, snapshot, storage).
 - Repo: https://github.com/DilshanRanabahu/camdesk (public, branch `main`).
 
 ## Stack
@@ -84,6 +85,10 @@ uv was installed with winget; a terminal opened before that may not have it on `
 - Any GL change must keep `tests/test_video_widget.py` (renders real frames, checks pixel colors) passing.
 - A `QTimer` (or any timer) owned by a worker `QThread` must be **deleted on that thread** before it quits — use a `BlockingQueuedConnection` shutdown slot and `shiboken6.delete(timer)`. Deleting it later from the UI thread (e.g. by garbage collection) warns "Timers cannot be stopped from another thread" and can abort the process.
 - On Windows, Qt's own warnings go to the debugger, not the console. To see them, set `QT_FORCE_STDERR_LOGGING=1` or install a handler with `qInstallMessageHandler`.
+- Recorder packet sinks run **on the stream thread**: copy the packet (`bytes(packet)` + timing) and enqueue; never keep or mutate the original — it is still being decoded.
+- PyAV: `CodecContext.time_base` needs a `Fraction` (not `"1/30"`); `reformat(src_color_range=…)` takes `ColorRange.MPEG/JPEG`.
+- Test media must be **paced and looped** to behave like a camera (`PacedFile` in `tests/test_capture.py`); a raw file ends in milliseconds.
+- Never import a function named `test_*` into a test module — pytest collects it (alias it).
 - Optimistic UI + polling race: ignore status reports while commands are in flight (`AppController._in_flight`). A report taken before a command runs would undo the optimistic value and the next click builds on stale state.
 - `QScreen.grabWindow(0, x, y, …)` takes coordinates **relative to that screen**, not global ones (the second monitor is at negative x).
 

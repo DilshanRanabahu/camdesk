@@ -53,14 +53,6 @@ class ControlDock(QFrame):
         ):
             button.clicked.connect(signal)
             layout.addWidget(button)
-        # Snapshot and recording arrive in build step 8.
-        for button, tip in (
-            (self.snapshot, strings.TIP_SNAPSHOT),
-            (self.record, strings.TIP_RECORD),
-        ):
-            button.setEnabled(False)
-            button.setToolTip(f"{tip} — {strings.TIP_COMING_SOON}")
-
         self._effect = QGraphicsOpacityEffect(self)
         self._effect.setOpacity(1.0)
         self.setGraphicsEffect(self._effect)
@@ -80,7 +72,15 @@ class ControlDock(QFrame):
 
     # -- capability-aware enabling ---------------------------------------
 
+    def set_recording(self, active: bool) -> None:
+        self.record.setProperty("recording", "true" if active else "false")
+        self.record.setToolTip(strings.TIP_STOP_RECORD if active else strings.TIP_RECORD)
+        self.record.style().unpolish(self.record)
+        self.record.style().polish(self.record)
+
     def set_capabilities(self, caps: CameraCapabilities, connected: bool) -> None:
+        self.snapshot.setEnabled(connected)
+        self.record.setEnabled(connected)
         self.switch.setEnabled(connected and caps.has_front_camera)
         self.focus.setEnabled(connected and caps.has_autofocus)
         self.focus.setToolTip(

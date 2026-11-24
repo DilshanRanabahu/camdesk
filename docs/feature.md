@@ -4,7 +4,7 @@ A Windows desktop app to view, record and control an Android phone running the *
 
 Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [architecture.md](architecture.md)
 
-> **Progress (2026-11-24):** Version 1 build steps **1–7 of 10** done — dark UI, live GPU video, control dock and side panel with every camera control (verified on the phone). Next: step 8, snapshots + MKV recording. `[x]` = done.
+> **Progress (2026-11-24):** Version 1 build steps **1–8 of 10** done — dark UI, live GPU video, every camera control, snapshots and MKV recording (all verified on the phone). Next: step 9, polish. `[x]` = done.
 
 ## Tech Stack
 
@@ -42,10 +42,10 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 - [x] 8a. Debug overlay (`Ctrl+D`): CPU, FPS, latency, bitrate, decoder in use
 
 ### Capture
-- [ ] 9. Snapshot (button or Space), saved with timestamp
-- [ ] 10. Record to **MKV** (video + audio) without re-encoding, with recording timer
-- [ ] 10a. Auto-split recordings into a new file every **30 minutes**
-- [ ] 11. "Open captures folder" button
+- [x] 9. Snapshot (button or Space), saved with timestamp (flash + "Open" link)
+- [x] 10. Record to **MKV** (video + audio) without re-encoding, with recording timer (REC badge + status bar)
+- [x] 10a. Auto-split recordings into a new file every **30 minutes** (at a keyframe; also on reconnect)
+- [x] 11. "Open captures folder" button (Captures card: snapshots / recordings)
 
 ### Camera Controls (sent to the phone)
 - [x] 12. Flashlight on/off — **back camera only** (front has no flash; button disabled)
@@ -58,7 +58,7 @@ Related docs: [decisions.md](decisions.md) · [ui-design.md](ui-design.md) · [a
 
 ### Status Bar
 - [ ] 19. Phone battery level — only when the phone reports it (IP Webcam 1.19 on the A06 sends no sensor data)
-- [ ] 20. Recording status and free disk space (free disk space ✅; recording status in step 8)
+- [x] 20. Recording status and free disk space (warns < 2 GB, stops < 1 GB)
 
 ### UI
 - [x] Dark theme (tokens → stylesheet + palette)

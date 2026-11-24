@@ -43,6 +43,8 @@ def _icon_button(name: str, tip: str) -> QPushButton:
 
 class SidePanel(QScrollArea):
     view_mode_selected = Signal(object)  # ViewMode
+    open_snapshots_requested = Signal()
+    open_recordings_requested = Signal()
 
     def __init__(self, controller: AppController, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -62,6 +64,7 @@ class SidePanel(QScrollArea):
         layout.addWidget(self._camera_card())
         layout.addWidget(self._image_card())
         layout.addWidget(self._view_card())
+        layout.addWidget(self._captures_card())
         layout.addStretch(1)
         self.setWidget(body)
         self._apply_enabled()
@@ -150,6 +153,19 @@ class SidePanel(QScrollArea):
             sl.addWidget(button, 1)
         self.view_buttons[ViewMode.FIT].setChecked(True)
         card.add(segments)
+        return card
+
+    def _captures_card(self) -> Card:
+        card = Card(strings.PANEL_CAPTURES)
+        for text, signal in (
+            (strings.OPEN_SNAPSHOTS, self.open_snapshots_requested),
+            (strings.OPEN_RECORDINGS, self.open_recordings_requested),
+        ):
+            button = QPushButton(text)
+            button.setProperty("variant", "ghost")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(signal)
+            card.add(button)
         return card
 
     # -- AppState → widgets ----------------------------------------------------

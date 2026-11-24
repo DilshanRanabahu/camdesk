@@ -6,7 +6,7 @@ Related docs: [feature.md](feature.md) · [decisions.md](decisions.md) · [archi
 
 Language: **English only**. All user-facing text lives in one module (`ui/strings.py`) so wording stays consistent.
 
-> **Implementation status (step 7):** built — tokens, stylesheet, icons, custom title bar with camera pill and window buttons, connect screen (§6.1), connection states (§6.2), status bar, video area, `Ctrl+D` debug overlay, **control dock** (auto-hide fade), **side panel** (Camera / Image / View cards), toggle switch, labeled slider, disabled-control tooltips, tap-to-focus ring. Still to come: REC badge/snapshot flash (step 8), toasts (step 9). Screenshots: [connect screen](assets/connect-screen.png) · [main window](assets/main-window.png).
+> **Implementation status (step 7):** built — tokens, stylesheet, icons, custom title bar with camera pill and window buttons, connect screen (§6.1), connection states (§6.2), status bar, video area, `Ctrl+D` debug overlay, **control dock** (auto-hide fade), **side panel** (Camera / Image / View / Captures cards), toggle switch, labeled slider, disabled-control tooltips, tap-to-focus ring, **REC badge** and red record button (§6.3), **snapshot flash** (§6.4). Still to come: toasts with thumbnails (step 9). Screenshots: [connect screen](assets/connect-screen.png) · [main window](assets/main-window.png).
 
 ---
 

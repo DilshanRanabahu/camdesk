@@ -168,7 +168,7 @@ def test_view_mode_buttons(window: MainWindow) -> None:
 
 def test_dock_buttons(window: MainWindow) -> None:
     dock = window.dock
-    assert not dock.snapshot.isEnabled() and not dock.record.isEnabled()  # step 8
+    assert dock.snapshot.isEnabled() and dock.record.isEnabled()
     dock.switch.click()
     assert wait_until(lambda: window.fake.state["ffc"] == "on")  # type: ignore[attr-defined]
 

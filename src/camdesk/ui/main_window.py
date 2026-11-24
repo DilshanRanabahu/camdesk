@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import replace
+from pathlib import Path
 
-from PySide6.QtCore import QEvent, QPoint, QRect
-from PySide6.QtGui import QAction, QIcon, QKeySequence, QPixmap, QShortcut
+from PySide6.QtCore import QEvent, QPoint, QRect, QUrl
+from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -25,7 +26,13 @@ from PySide6.QtWidgets import (
 
 from camdesk.core.controller import AppController
 from camdesk.core.frames import LatestFrameBuffer
-from camdesk.core.models import CameraCapabilities, CameraProfile, ConnectionState, Toast
+from camdesk.core.models import (
+    CameraCapabilities,
+    CameraProfile,
+    ConnectionState,
+    RecordingState,
+    Toast,
+)
 from camdesk.core.state import AppState
 from camdesk.ui import strings
 from camdesk.ui.connect_view import ConnectView, camera_label
@@ -35,7 +42,13 @@ from camdesk.ui.status_bar import STATE_COLORS, StatusBar
 from camdesk.ui.theme import icons, tokens
 from camdesk.ui.title_bar import TitleBar
 from camdesk.ui.video.connection_overlay import ConnectionOverlay
-from camdesk.ui.video.overlays import DebugOverlay, FocusRing
+from camdesk.ui.video.overlays import (
+    DebugOverlay,
+    FocusRing,
+    RecBadge,
+    SnapshotFlash,
+    format_elapsed,
+)
 from camdesk.ui.video.video_widget import VideoWidget, ViewMode
 from camdesk.ui.win_frame import NativeFrame
 
@@ -73,6 +86,8 @@ class MainWindow(QMainWindow):
         self.debug = DebugOverlay(self.video, buffer, state)
         self.dock = ControlDock(self.video)
         self.focus_ring = FocusRing(self.video)
+        self.rec_badge = RecBadge(self.video)
+        self.flash = SnapshotFlash(self.video)
         self.stack.addWidget(self.connect_view)
         self.stack.addWidget(self.video)
         self.side_panel = SidePanel(controller)
@@ -133,6 +148,15 @@ class MainWindow(QMainWindow):
         self.dock.switch_camera_requested.connect(c.switch_camera)
         self.dock.focus_requested.connect(c.focus)
         self.dock.fullscreen_requested.connect(self.toggle_fullscreen)
+        self.dock.snapshot_requested.connect(self.take_snapshot)
+        self.dock.record_requested.connect(c.capture.toggle_recording)
+        s.recording_changed.connect(self._on_recording_changed)
+        self.side_panel.open_snapshots_requested.connect(
+            lambda: self._open_folder(c.settings.snapshots_path())
+        )
+        self.side_panel.open_recordings_requested.connect(
+            lambda: self._open_folder(c.settings.recordings_path())
+        )
 
         keys = {
             "Ctrl+D": self.debug.toggle,
@@ -149,13 +173,15 @@ class MainWindow(QMainWindow):
             "A": c.focus,
             "Ctrl+R": c.retry,
             "Tab": self.toggle_side_panel,
+            "Space": self.take_snapshot,
+            "R": c.capture.toggle_recording,
         }
         # Single-key shortcuts are switched off on the connect screen, so typing an address
         # like "192.168.1.5" doesn't trigger zoom or the flashlight.
         self._letter_shortcuts: list[QShortcut] = []
         for key, action in keys.items():
             shortcut = QShortcut(QKeySequence(key), self, action)
-            if len(key) == 1 or key == "Tab":  # Tab must move focus between form fields
+            if len(key) == 1 or key in ("Tab", "Space"):  # keep them for the connect form
                 self._letter_shortcuts.append(shortcut)
 
     # -- state → UI ---------------------------------------------------------
@@ -219,7 +245,21 @@ class MainWindow(QMainWindow):
 
     def _show_toast(self, toast: Toast) -> None:
         log.info("Notification: %s", toast.message)
-        self.status_bar.show_message(toast.message)
+        self.status_bar.show_message(toast.message, toast.action_path)
+
+    def _on_recording_changed(self, r: RecordingState) -> None:
+        self.rec_badge.set_recording(r.active, r.elapsed_s, r.part)
+        self.dock.set_recording(r.active)
+        self.status_bar.set_recording(r.active, format_elapsed(r.elapsed_s))
+
+    def take_snapshot(self) -> None:
+        if self.state.connection is ConnectionState.CONNECTED and self.video.has_frame:
+            self.flash.flash()
+        self.controller.capture.snapshot()
+
+    def _open_folder(self, folder: Path) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     # -- actions --------------------------------------------------------------
 

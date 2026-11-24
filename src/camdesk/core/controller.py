@@ -29,6 +29,8 @@ from camdesk.config import secrets as keyring_secrets
 from camdesk.config import settings as settings_store
 from camdesk.config.settings import Settings
 from camdesk.core import geometry, messages
+from camdesk.core.capture_manager import CaptureManager
+from camdesk.core.frames import VideoFrame
 from camdesk.core.models import (
     CameraCapabilities,
     CameraFacing,
@@ -66,6 +68,8 @@ class AppController(QObject):
         *,
         secrets: Secrets = keyring_secrets,  # type: ignore[assignment]
         save_settings: Callable[[Settings], None] = settings_store.save,
+        latest_frame: Callable[[], VideoFrame | None] = lambda: None,
+        capture: CaptureManager | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -77,6 +81,7 @@ class AppController(QObject):
         self._save_settings = save_settings
         self._stream: Any = None
         self._in_flight = 0  # commands sent, not yet answered
+        self.capture = capture or CaptureManager(state, settings, latest_frame, parent=self)
         self._auth_warned = False
 
         self._zoom_pending: int | None = None
@@ -120,11 +125,13 @@ class AppController(QObject):
         stream.stream_info_changed.connect(self._on_stream_info)
         stream.frame_ready.connect(self.state.frame_ready)
         self._stream = stream
+        self.capture.attach_stream(stream)
         log.info("Connecting to %s (%s)", profile.name, profile.address)
         stream.start()
 
     def disconnect(self) -> None:
         """Stop streaming and polling. Returns at once — never waits on the network."""
+        self.capture.detach_stream()  # finishes a running recording
         stream, self._stream = self._stream, None
         if stream is not None:
             stream.frame_ready.disconnect(self.state.frame_ready)
@@ -160,6 +167,7 @@ class AppController(QObject):
     def shutdown(self) -> None:
         """App exit: stop everything and save settings (blocking is fine here)."""
         self._zoom_timer.stop()
+        self.capture.shutdown()  # complete the recording file before the stream stops
         stream, self._stream = self._stream, None
         if stream is not None:
             stream.stop()

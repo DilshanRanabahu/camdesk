@@ -174,6 +174,18 @@ QPushButton[variant="dock"] {{
 }}
 QPushButton[variant="dock"]:hover {{ background: {t.DOCK_HOVER}; }}
 QPushButton[variant="dock"]:checked {{ background: {t.ACCENT}; }}
+QPushButton[variant="dock"][recording="true"] {{ background: {t.DANGER}; }}
+QLabel#RecBadge {{
+    background: {t.DANGER};
+    color: {t.TEXT_ON_ACCENT};
+    border-radius: {t.RADIUS_SM}px;
+    padding: {t.SPACE_1}px {t.SPACE_2}px;
+    font-family: "{t.FONT_MONO}", "{t.FONT_MONO_FALLBACK}";
+    font-size: {t.SIZE_MONO}px;
+    font-weight: 600;
+}}
+QLabel#StatusRec {{ color: {t.DANGER}; font-weight: 600; }}
+QWidget#Flash {{ background: {t.TEXT_ON_ACCENT}; }}
 QPushButton[variant="segment"] {{
     background: {t.BG_BASE};
     border-radius: 0;

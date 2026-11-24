@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import html
 import shutil
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from camdesk.core.models import ConnectionState, DeviceInfo, StreamInfo
@@ -60,10 +62,16 @@ class StatusBar(QWidget):
         self.disk = QLabel()
         self.stream = QLabel()
         self.message = QLabel()
+        self.message.setTextFormat(Qt.TextFormat.RichText)
+        self.message.linkActivated.connect(self._open_link)
+        self.rec = QLabel()
+        self.rec.setObjectName("StatusRec")
+        self.rec.hide()
         layout.addWidget(self.dot)
         layout.addWidget(self.connection)
         layout.addWidget(self.battery)
         layout.addWidget(self.disk)
+        layout.addWidget(self.rec)
         layout.addWidget(self.message, 1)
         layout.addWidget(self.stream)
         self.battery.hide()
@@ -104,10 +112,22 @@ class StatusBar(QWidget):
             )
         )
 
-    def show_message(self, text: str) -> None:
-        """Short-lived message (until real toasts arrive in step 9)."""
-        self.message.setText(text)
-        self._message_timer.start(MESSAGE_MS)
+    def show_message(self, text: str, path: str = "") -> None:
+        """Short-lived message (until real toasts arrive in step 9), with an "Open" link."""
+        safe = html.escape(text)
+        if path:
+            url = QUrl.fromLocalFile(path).toString()
+            safe += f' · <a href="{url}" style="color:{tokens.ACCENT}">{strings.OPEN_LINK}</a>'
+        self.message.setText(safe)
+        self._message_timer.start(MESSAGE_MS * (2 if path else 1))
+
+    def set_recording(self, active: bool, elapsed: str) -> None:
+        self.rec.setVisible(active)
+        if active:
+            self.rec.setText(strings.STATUS_RECORDING.format(elapsed=elapsed))
+
+    def _open_link(self, url: str) -> None:
+        QDesktopServices.openUrl(QUrl(url))
 
     def refresh_disk(self) -> None:
         gb = free_space_gb(self._captures_dir)

@@ -12,7 +12,7 @@ from PySide6.QtCore import (
     QTimer,
 )
 from PySide6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPen
-from PySide6.QtWidgets import QLabel, QWidget
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel, QWidget
 
 from camdesk.core.frames import LatestFrameBuffer
 from camdesk.core.models import CameraFacing
@@ -150,3 +150,56 @@ class FocusRing(QWidget):
         inset = 2 + self._t * self.width() * 0.2  # shrinks as it settles
         p.drawEllipse(QRectF(inset, inset, self.width() - 2 * inset, self.height() - 2 * inset))
         p.end()
+
+
+def format_elapsed(seconds: float) -> str:
+    s = int(seconds)
+    h, m, sec = s // 3600, (s // 60) % 60, s % 60
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m:02d}:{sec:02d}"
+
+
+class RecBadge(QLabel):
+    """Red "● REC 00:12" pill, top-left of the video (ui-design.md §6.3)."""
+
+    def __init__(self, video: QWidget) -> None:
+        super().__init__(video)
+        self.setObjectName("RecBadge")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.hide()
+
+    def set_recording(self, active: bool, elapsed_s: float, part: int) -> None:
+        if not active:
+            self.hide()
+            return
+        elapsed = format_elapsed(elapsed_s)
+        text = (
+            strings.REC_BADGE_PART.format(elapsed=elapsed, part=part)
+            if part > 1
+            else strings.REC_BADGE.format(elapsed=elapsed)
+        )
+        self.setText(text)
+        self.adjustSize()
+        self.move(tokens.SPACE_3, tokens.SPACE_3)
+        self.show()
+        self.raise_()
+
+
+class SnapshotFlash(QWidget):
+    """Quick white flash over the video when a snapshot is taken (80 ms, 30%)."""
+
+    def __init__(self, video: QWidget) -> None:
+        super().__init__(video)
+        self.setObjectName("Flash")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        self._video = video
+        self._effect = QGraphicsOpacityEffect(self)
+        self._effect.setOpacity(tokens.FLASH_OPACITY)
+        self.setGraphicsEffect(self._effect)
+        self.hide()
+
+    def flash(self) -> None:
+        self.setGeometry(self._video.rect())
+        self.show()
+        self.raise_()
+        QTimer.singleShot(tokens.FLASH_MS, self.hide)
